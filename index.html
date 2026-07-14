@@ -43,15 +43,15 @@
 
   #hud {
     position: absolute; top: 10px; left: 0; right: 0;
-    display: flex; align-items: stretch; gap: 8px;
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
     padding: 0 10px; pointer-events: none; z-index: 20;
   }
-  .hud-box { background: rgba(0,0,0,.35); border-radius: 12px; padding: 8px 12px; backdrop-filter: blur(4px); flex-shrink: 0; }
+  .hud-box { background: rgba(0,0,0,.35); border-radius: 12px; padding: 8px 12px; backdrop-filter: blur(4px); width: min(44%, 170px); text-align: center; }
   .hud-label { font-size: 11px; color: #9aa0c0; font-weight: 700; }
   .hud-val { font-size: 20px; font-weight: 900; color: #ffd83d; line-height: 1.1; }
 
-  /* 부장님 멘탈 게이지 (HUD 가운데, 어떤 화면 폭에서도 안 겹치게 flex로 배치) */
-  #mentalWrap { flex: 1; min-width: 0; align-self: center; }
+  /* 부장님 멘탈 게이지: 명중/콤보 아래 줄에 중앙 배치, 데스크탑에선 최대 320px */
+  #mentalWrap { flex-basis: 100%; max-width: 320px; margin: 0 auto; min-width: 0; }
   #mentalLabel { text-align: center; font-size: 11px; font-weight: 800; color: #cfd3ec; margin-bottom: 4px; text-shadow: 0 1px 3px rgba(0,0,0,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #mentalBar { position: relative; height: 17px; background: rgba(0,0,0,.5); border-radius: 9px; overflow: hidden; border: 1px solid rgba(255,255,255,.2); }
   #mentalFill { height: 100%; width: 100%; border-radius: 9px; background: linear-gradient(90deg,#2ecc71,#f1c40f,#ff4757); transition: width .25s; }
@@ -71,7 +71,7 @@
   #bossSvg { width: 100%; display: block; overflow: visible; }
 
   #bubble {
-    position: absolute; left: 50%; top: 12%;
+    position: absolute; left: 50%; top: calc(24% + 28px); /* 부장님 머리 바로 위 */
     transform: translate(-50%, -100%);
     background: #fff; color: #22253a;
     font-weight: 800; font-size: 14px;
@@ -262,16 +262,16 @@
         <div class="hud-label">명중</div>
         <div class="hud-val" id="hitCount">0</div>
       </div>
+      <div class="hud-box">
+        <div class="hud-label">콤보 (최고 <span id="bestCombo">0</span>)</div>
+        <div class="hud-val" id="comboCount">0</div>
+      </div>
       <div id="mentalWrap">
         <div id="mentalLabel">부장님 멘탈</div>
         <div id="mentalBar">
           <div id="mentalFill"></div>
           <div id="mentalNum">100 / 100</div>
         </div>
-      </div>
-      <div class="hud-box" style="text-align:right">
-        <div class="hud-label">콤보 (최고 <span id="bestCombo">0</span>)</div>
-        <div class="hud-val" id="comboCount">0</div>
       </div>
     </div>
 
