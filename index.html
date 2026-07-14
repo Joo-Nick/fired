@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>퇴사 시뮬레이터 🔥</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body {
+    font-family: 'Pretendard', -apple-system, 'Malgun Gothic', sans-serif;
+    background: #14161f;
+    color: #fff;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  #app { height: 100%; display: flex; flex-direction: column; }
+
+  /* ── 탭 ── */
+  #tabs {
+    display: flex; gap: 8px; padding: 10px 12px;
+    background: #1b1e2b; z-index: 50;
+  }
+  .tab-btn {
+    flex: 1; padding: 12px 8px; border: none; border-radius: 12px;
+    font-size: 15px; font-weight: 800; cursor: pointer;
+    background: #262a3d; color: #8a90ad;
+    transition: all .15s;
+  }
+  .tab-btn.active { background: #ff4757; color: #fff; box-shadow: 0 4px 14px rgba(255,71,87,.45); }
+
+  .screen { flex: 1; position: relative; display: none; overflow: hidden; }
+  .screen.active { display: block; }
+
+  /* ═══════════ 게임 1: 사직서 던지기 ═══════════ */
+  #throwScreen {
+    background: linear-gradient(#2b3049 0%, #363c5c 55%, #23273a 55.2%, #1c1f30 100%);
+  }
+  #officeDeco { position: absolute; inset: 0; pointer-events: none; opacity: .5; font-size: 28px; }
+  #officeDeco span { position: absolute; }
+
+  #hud {
+    position: absolute; top: 10px; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 0 14px; pointer-events: none; z-index: 20;
+  }
+  .hud-box { background: rgba(0,0,0,.35); border-radius: 12px; padding: 8px 12px; backdrop-filter: blur(4px); }
+  .hud-label { font-size: 11px; color: #9aa0c0; font-weight: 700; }
+  .hud-val { font-size: 20px; font-weight: 900; color: #ffd83d; line-height: 1.1; }
+
+  /* 부장님 멘탈 게이지 */
+  #mentalWrap { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: min(46vw, 220px); z-index: 20; pointer-events: none; }
+  #mentalLabel { text-align: center; font-size: 11px; font-weight: 800; color: #cfd3ec; margin-bottom: 4px; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+  #mentalBar { height: 14px; background: rgba(0,0,0,.5); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,.2); }
+  #mentalFill { height: 100%; width: 100%; border-radius: 8px; background: linear-gradient(90deg,#2ecc71,#f1c40f,#ff4757); transition: width .25s; }
+
+  #bossWrap {
+    position: absolute; left: 50%; top: 24%;
+    transform: translateX(-50%);
+    width: min(52vw, 260px);
+    z-index: 5;
+    transition: filter .2s;
+  }
+  #bossSvg { width: 100%; display: block; overflow: visible; }
+
+  #bubble {
+    position: absolute; left: 50%; top: 12%;
+    transform: translate(-50%, -100%);
+    background: #fff; color: #22253a;
+    font-weight: 800; font-size: 14px;
+    padding: 10px 14px; border-radius: 14px;
+    max-width: 78vw; text-align: center;
+    opacity: 0; transition: opacity .2s;
+    z-index: 30; pointer-events: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  }
+  #bubble::after {
+    content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+    border: 9px solid transparent; border-top-color: #fff; border-bottom: 0;
+  }
+  #bubble.show { opacity: 1; }
+
+  /* 사직서 */
+  #paper {
+    position: absolute; width: 74px; height: 96px;
+    z-index: 15; cursor: grab; will-change: transform;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,.5));
+  }
+  #paper:active { cursor: grabbing; }
+  #paper svg { width: 100%; height: 100%; display: block; }
+
+  #aimLine { position: absolute; inset: 0; z-index: 14; pointer-events: none; }
+
+  #throwHint {
+    position: absolute; bottom: 12%; left: 50%; transform: translateX(-50%);
+    color: #aab0d5; font-size: 13px; font-weight: 700; text-align: center;
+    pointer-events: none; z-index: 10; animation: hintPulse 1.6s infinite;
+    text-shadow: 0 2px 6px rgba(0,0,0,.7); width: 90vw;
+  }
+  @keyframes hintPulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+
+  /* 타격 텍스트 */
+  .fx-text {
+    position: absolute; z-index: 40; pointer-events: none;
+    font-weight: 900; white-space: nowrap;
+    transform: translate(-50%,-50%);
+    animation: fxPop .9s forwards;
+    text-shadow: 0 3px 0 rgba(0,0,0,.35);
+  }
+  @keyframes fxPop {
+    0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; }
+    18% { transform: translate(-50%,-50%) scale(1.25); opacity: 1; }
+    32% { transform: translate(-50%,-50%) scale(1); }
+    75% { opacity: 1; }
+    100% { transform: translate(-50%,-110%) scale(1); opacity: 0; }
+  }
+  .particle { position: absolute; z-index: 35; pointer-events: none; will-change: transform, opacity; }
+
+  /* 화면 흔들림/플래시 */
+  .shake-s { animation: shakeS .25s; }
+  .shake-m { animation: shakeM .35s; }
+  .shake-l { animation: shakeL .5s; }
+  @keyframes shakeS { 0%,100%{transform:translate(0)} 25%{transform:translate(3px,-2px)} 50%{transform:translate(-3px,2px)} 75%{transform:translate(2px,1px)} }
+  @keyframes shakeM { 0%,100%{transform:translate(0)} 20%{transform:translate(7px,-5px)} 40%{transform:translate(-7px,5px)} 60%{transform:translate(5px,3px)} 80%{transform:translate(-4px,-3px)} }
+  @keyframes shakeL { 0%,100%{transform:translate(0)} 15%{transform:translate(12px,-9px) rotate(.6deg)} 30%{transform:translate(-12px,9px) rotate(-.6deg)} 45%{transform:translate(10px,6px)} 60%{transform:translate(-9px,-6px)} 75%{transform:translate(6px,4px)} 90%{transform:translate(-4px,-2px)} }
+
+  #flash {
+    position: absolute; inset: 0; z-index: 45; pointer-events: none;
+    background: #fff; opacity: 0;
+  }
+  #flash.go { animation: flashGo .3s; }
+  @keyframes flashGo { 0%{opacity:.7} 100%{opacity:0} }
+
+  /* KO 오버레이 */
+  #koOverlay {
+    position: absolute; inset: 0; z-index: 60;
+    background: rgba(10,10,20,.82); backdrop-filter: blur(3px);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 14px; padding: 20px;
+  }
+  #koOverlay.show { display: flex; animation: koIn .4s; }
+  @keyframes koIn { from{opacity:0; transform:scale(1.15)} to{opacity:1; transform:scale(1)} }
+  #koTitle { font-size: clamp(38px, 11vw, 72px); font-weight: 900; color: #ffd83d; text-shadow: 0 0 30px rgba(255,216,61,.6); }
+  #koSub { font-size: 17px; font-weight: 700; color: #dfe3ff; line-height: 1.5; }
+  .big-btn {
+    border: none; border-radius: 16px; padding: 16px 34px;
+    font-size: 18px; font-weight: 900; cursor: pointer;
+    background: #ff4757; color: #fff;
+    box-shadow: 0 6px 20px rgba(255,71,87,.5);
+    transition: transform .1s;
+  }
+  .big-btn:active { transform: scale(.94); }
+
+  /* ═══════════ 게임 2: 회사 폭파 ═══════════ */
+  #boomScreen { background: linear-gradient(#1a2440 0%, #2c3a63 60%, #151827 60.2%, #101322 100%); }
+
+  #statsBanner {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    width: min(92vw, 480px); z-index: 20;
+    background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 16px; padding: 12px 16px; text-align: center;
+    backdrop-filter: blur(6px);
+  }
+  #statsBanner .live { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: #ff6b7a; }
+  #statsBanner .live::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #ff4757; animation: liveBlink 1.2s infinite; }
+  @keyframes liveBlink { 0%,100%{opacity:1} 50%{opacity:.25} }
+  #natLine { font-size: 14px; font-weight: 700; color: #dfe3ff; margin-top: 5px; line-height: 1.55; }
+  #natLine b { color: #ffd83d; font-size: 17px; }
+  #myLine { font-size: 12px; color: #9aa0c0; margin-top: 5px; font-weight: 700; }
+  #myLine b { color: #7bffb2; }
+
+  #cityWrap {
+    position: absolute; left: 50%; bottom: 27%;
+    transform: translateX(-50%);
+    width: min(78vw, 380px); z-index: 5;
+  }
+  #buildingSvg { width: 100%; display: block; overflow: visible; }
+
+  #quitBtnWrap {
+    position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%);
+    z-index: 20; text-align: center;
+  }
+  #quitBtn {
+    width: min(52vw, 210px); height: min(52vw, 210px) ;
+    max-height: 22vh; max-width: 22vh;
+    border-radius: 50%; border: none; cursor: pointer;
+    background: radial-gradient(circle at 35% 30%, #ff7684, #ff2d43 55%, #c40f24);
+    box-shadow: 0 10px 0 #8e0a1a, 0 16px 34px rgba(255,45,67,.5), inset 0 -6px 14px rgba(0,0,0,.3);
+    color: #fff; font-weight: 900; font-size: clamp(20px, 5.4vw, 30px);
+    letter-spacing: 2px;
+    transition: transform .08s, box-shadow .08s;
+    animation: btnBreath 2.2s infinite;
+  }
+  @keyframes btnBreath { 0%,100%{transform:scale(1)} 50%{transform:scale(1.035)} }
+  #quitBtn:active {
+    transform: translateY(8px) scale(.97);
+    box-shadow: 0 2px 0 #8e0a1a, 0 6px 16px rgba(255,45,67,.4), inset 0 -3px 10px rgba(0,0,0,.3);
+    animation: none;
+  }
+  #quitBtn small { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0; opacity: .85; margin-top: 4px; }
+  #comboBoomText { margin-top: 10px; font-size: 13px; font-weight: 800; color: #ffb3bb; min-height: 18px; text-shadow: 0 2px 5px rgba(0,0,0,.6); }
+
+  #boomFlash { position: absolute; inset: 0; z-index: 45; pointer-events: none; background: #fff; opacity: 0; }
+  #boomFlash.go { animation: boomFlashGo .45s; }
+  @keyframes boomFlashGo { 0%{opacity:.95; background:#fff} 30%{opacity:.6; background:#ffd166} 100%{opacity:0; background:#ff4757} }
+
+  #milestone {
+    position: absolute; top: 30%; left: 50%; transform: translate(-50%,-50%);
+    z-index: 55; pointer-events: none; text-align: center;
+    font-size: clamp(24px, 7vw, 44px); font-weight: 900; color: #ffd83d;
+    text-shadow: 0 0 24px rgba(255,216,61,.7), 0 4px 0 rgba(0,0,0,.3);
+    opacity: 0;
+  }
+  #milestone.show { animation: mileIn 2s forwards; }
+  @keyframes mileIn {
+    0%{opacity:0; transform:translate(-50%,-50%) scale(.4)}
+    12%{opacity:1; transform:translate(-50%,-50%) scale(1.15)}
+    22%{transform:translate(-50%,-50%) scale(1)}
+    80%{opacity:1}
+    100%{opacity:0; transform:translate(-50%,-70%)}
+  }
+
+  .crack { position: absolute; z-index: 6; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="tabs">
+    <button class="tab-btn active" data-tab="throwScreen">😤 사직서 던지기</button>
+    <button class="tab-btn" data-tab="boomScreen">💥 회사 폭파</button>
+  </div>
+
+  <!-- ═══ 게임 1 ═══ -->
+  <div id="throwScreen" class="screen active">
+    <div id="officeDeco"></div>
+
+    <div id="hud">
+      <div class="hud-box">
+        <div class="hud-label">명중</div>
+        <div class="hud-val" id="hitCount">0</div>
+      </div>
+      <div class="hud-box" style="text-align:right">
+        <div class="hud-label">콤보 (최고 <span id="bestCombo">0</span>)</div>
+        <div class="hud-val" id="comboCount">0</div>
+      </div>
+    </div>
+
+    <div id="mentalWrap">
+      <div id="mentalLabel">부장님 멘탈</div>
+      <div id="mentalBar"><div id="mentalFill"></div></div>
+    </div>
+
+    <div id="bubble"></div>
+
+    <div id="bossWrap">
+      <svg id="bossSvg" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+        <!-- 몸통 (양복) -->
+        <g id="bossBody">
+          <path d="M40 260 L45 195 Q100 168 155 195 L160 260 Z" fill="#2f3542"/>
+          <path d="M84 190 L100 235 L116 190 L104 184 L96 184 Z" fill="#f1f2f6"/>
+          <path d="M96 188 L104 188 L108 214 L100 232 L92 214 Z" fill="#c0392b"/>
+          <circle cx="63" cy="215" r="4" fill="#1e2430"/>
+          <circle cx="137" cy="215" r="4" fill="#1e2430"/>
+        </g>
+        <!-- 머리 -->
+        <g id="bossHead">
+          <ellipse cx="100" cy="112" rx="62" ry="70" fill="#f5c9a0"/>
+          <!-- 귀 -->
+          <ellipse cx="38" cy="115" rx="10" ry="15" fill="#f0bd90"/>
+          <ellipse cx="162" cy="115" rx="10" ry="15" fill="#f0bd90"/>
+          <!-- 머리카락 (바코드 스타일) -->
+          <path d="M38 92 Q45 38 100 36 Q155 38 162 92 Q150 66 100 62 Q50 66 38 92 Z" fill="#3d3d3d"/>
+          <g stroke="#3d3d3d" stroke-width="4" fill="none">
+            <path d="M55 55 Q100 42 145 55"/>
+            <path d="M50 65 Q100 50 150 65"/>
+          </g>
+          <!-- 눈썹 -->
+          <g id="brows">
+            <path id="browL" d="M55 92 L85 98" stroke="#3d3d3d" stroke-width="7" stroke-linecap="round"/>
+            <path id="browR" d="M145 92 L115 98" stroke="#3d3d3d" stroke-width="7" stroke-linecap="round"/>
+          </g>
+          <!-- 눈 -->
+          <g id="eyesOpen">
+            <circle cx="72" cy="112" r="8" fill="#2b2b2b"/>
+            <circle cx="128" cy="112" r="8" fill="#2b2b2b"/>
+            <circle cx="74.5" cy="109.5" r="2.6" fill="#fff"/>
+            <circle cx="130.5" cy="109.5" r="2.6" fill="#fff"/>
+          </g>
+          <g id="eyesHit" style="display:none" stroke="#2b2b2b" stroke-width="5" stroke-linecap="round">
+            <path d="M62 104 L82 120 M82 104 L62 120"/>
+            <path d="M118 104 L138 120 M138 104 L118 120"/>
+          </g>
+          <g id="eyesDizzy" style="display:none" fill="none" stroke="#2b2b2b" stroke-width="4">
+            <path d="M64 112 a8 8 0 1 1 8 8 a5 5 0 1 1 5-5"/>
+            <path d="M120 112 a8 8 0 1 1 8 8 a5 5 0 1 1 5-5"/>
+          </g>
+          <!-- 볼 홍조 -->
+          <g id="blush" style="display:none">
+            <ellipse cx="60" cy="132" rx="11" ry="6" fill="#ff8a8a" opacity=".65"/>
+            <ellipse cx="140" cy="132" rx="11" ry="6" fill="#ff8a8a" opacity=".65"/>
+          </g>
+          <!-- 코 -->
+          <path d="M100 118 Q94 136 100 140 Q106 136 100 118" fill="#eab486"/>
+          <!-- 입 -->
+          <path id="mouth" d="M78 156 Q100 146 122 156" stroke="#a0522d" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <!-- 땀방울 -->
+          <g id="sweat" style="display:none">
+            <path d="M160 84 Q166 94 160 100 Q154 94 160 84" fill="#7ec8ff"/>
+            <path d="M44 78 Q50 88 44 94 Q38 88 44 78" fill="#7ec8ff"/>
+          </g>
+          <!-- 어지럼 별 -->
+          <g id="stars" style="display:none" fill="#ffd83d" font-size="26" font-weight="900">
+            <text x="30" y="40">★</text>
+            <text x="145" y="30">★</text>
+            <text x="90" y="18">✦</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <canvas id="aimLine"></canvas>
+
+    <div id="paper">
+      <svg viewBox="0 0 74 96" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3" width="68" height="90" rx="5" fill="#fdfdf5" stroke="#d5d2c0" stroke-width="2"/>
+        <text x="37" y="30" text-anchor="middle" font-size="16" font-weight="900" fill="#c0392b">사직서</text>
+        <g stroke="#b8b5a4" stroke-width="2.5" stroke-linecap="round">
+          <line x1="14" y1="44" x2="60" y2="44"/>
+          <line x1="14" y1="55" x2="60" y2="55"/>
+          <line x1="14" y1="66" x2="48" y2="66"/>
+        </g>
+        <circle cx="52" cy="78" r="9" fill="none" stroke="#c0392b" stroke-width="2.5"/>
+        <text x="52" y="82" text-anchor="middle" font-size="8" font-weight="900" fill="#c0392b">인</text>
+      </svg>
+    </div>
+
+    <div id="throwHint">사직서를 잡고 부장님 얼굴로 던지세요! 🎯<br>세게 던질수록 데미지 UP</div>
+    <div id="flash"></div>
+
+    <div id="koOverlay">
+      <div id="koTitle">K.O.!</div>
+      <div id="koSub"></div>
+      <button class="big-btn" id="koRetry">다음 부장님 출근시키기 😈</button>
+    </div>
+  </div>
+
+  <!-- ═══ 게임 2 ═══ -->
+  <div id="boomScreen" class="screen">
+    <div id="statsBanner">
+      <span class="live">LIVE 전국 퇴사 현황</span>
+      <div id="natLine"></div>
+      <div id="myLine"></div>
+    </div>
+
+    <div id="cityWrap">
+      <svg id="buildingSvg" viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg">
+        <g id="buildingBody">
+          <!-- 옆 건물들 -->
+          <rect x="8" y="200" width="52" height="140" fill="#232a44"/>
+          <rect x="240" y="180" width="52" height="160" fill="#232a44"/>
+          <g fill="#39456e">
+            <rect x="16" y="212" width="10" height="10"/><rect x="34" y="212" width="10" height="10"/>
+            <rect x="16" y="234" width="10" height="10"/><rect x="34" y="234" width="10" height="10"/>
+            <rect x="248" y="192" width="10" height="10"/><rect x="266" y="192" width="10" height="10"/>
+            <rect x="248" y="214" width="10" height="10"/><rect x="266" y="214" width="10" height="10"/>
+          </g>
+          <!-- 메인 회사 건물 -->
+          <g id="mainBuilding">
+            <rect x="80" y="60" width="140" height="280" rx="4" fill="#33406b"/>
+            <rect x="80" y="60" width="140" height="14" rx="4" fill="#4457a0"/>
+            <rect x="118" y="24" width="64" height="36" rx="3" fill="#2b3454"/>
+            <text x="150" y="49" text-anchor="middle" font-size="17" font-weight="900" fill="#ffd83d">(주)야근</text>
+            <!-- 창문 -->
+            <g id="windows" fill="#ffe082"></g>
+            <!-- 문 -->
+            <rect x="134" y="300" width="32" height="40" fill="#1d2440"/>
+            <rect x="149" y="300" width="2" height="40" fill="#33406b"/>
+          </g>
+        </g>
+        <!-- 잔해 (폭발 후) -->
+        <g id="rubble" style="display:none">
+          <path d="M70 340 L95 305 L120 322 L150 295 L180 320 L210 302 L232 340 Z" fill="#2a3050"/>
+          <rect x="100" y="315" width="26" height="14" fill="#33406b" transform="rotate(-14 113 322)"/>
+          <rect x="168" y="310" width="30" height="12" fill="#232a44" transform="rotate(9 183 316)"/>
+          <text x="150" y="290" text-anchor="middle" font-size="26">🔥</text>
+          <text x="112" y="308" text-anchor="middle" font-size="18">🔥</text>
+          <text x="192" y="304" text-anchor="middle" font-size="18">💨</text>
+        </g>
+        <!-- 바닥 -->
+        <rect x="0" y="338" width="300" height="4" fill="#0d0f1c"/>
+      </svg>
+    </div>
+
+    <div id="quitBtnWrap">
+      <button id="quitBtn">퇴사<small>PRESS TO QUIT</small></button>
+      <div id="comboBoomText"></div>
+    </div>
+
+    <div id="milestone"></div>
+    <div id="boomFlash"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════ 공통 유틸 ═══════════════════ */
+const $ = s => document.querySelector(s);
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = n => n.toLocaleString('ko-KR');
+const vibrate = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+/* ═══════════════════ 사운드 엔진 (Web Audio 합성) ═══════════════════ */
+const SFX = (() => {
+  let ctx = null;
+  const ac = () => {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  };
+  // 노이즈 버퍼 (타격/폭발용)
+  let noiseBuf = null;
+  const noise = c => {
+    if (!noiseBuf) {
+      noiseBuf = c.createBuffer(1, c.sampleRate * 1.2, c.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = c.createBufferSource();
+    src.buffer = noiseBuf;
+    return src;
+  };
+  const env = (c, g, t, a, peak, dur) => {
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  };
+
+  return {
+    unlock() { ac(); },
+    // 휙~ 던지는 소리
+    whoosh(power = 1) {
+      const c = ac(), t = c.currentTime;
+      const src = noise(c), f = c.createBiquadFilter(), g = c.createGain();
+      f.type = 'bandpass'; f.Q.value = 1.2;
+      f.frequency.setValueAtTime(400, t);
+      f.frequency.exponentialRampToValueAtTime(2200 + power * 800, t + 0.18);
+      env(c, g, t, 0.02, 0.25 * Math.min(power, 1.4), 0.25);
+      src.connect(f).connect(g).connect(c.destination);
+      src.start(t); src.stop(t + 0.3);
+    },
+    // 착! 타격음 (강도별)
+    hit(power = 1) {
+      const c = ac(), t = c.currentTime;
+      // 찰싹 (노이즈 버스트)
+      const n = noise(c), nf = c.createBiquadFilter(), ng = c.createGain();
+      nf.type = 'lowpass';
+      nf.frequency.setValueAtTime(3000 + power * 3000, t);
+      nf.frequency.exponentialRampToValueAtTime(300, t + 0.12);
+      env(c, ng, t, 0.004, 0.55 + power * 0.35, 0.13 + power * 0.06);
+      n.connect(nf).connect(ng).connect(c.destination);
+      n.start(t); n.stop(t + 0.25);
+      // 퍽 (저음 바디)
+      const o = c.createOscillator(), og = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(160 + power * 60, t);
+      o.frequency.exponentialRampToValueAtTime(45, t + 0.14);
+      env(c, og, t, 0.004, 0.7 + power * 0.4, 0.16);
+      o.connect(og).connect(c.destination);
+      o.start(t); o.stop(t + 0.2);
+    },
+    // 크리티컬! (타격 + 금속성 벨)
+    crit() {
+      SFX.hit(2);
+      const c = ac(), t = c.currentTime;
+      [880, 1320, 1760].forEach((fr, i) => {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = 'square';
+        o.frequency.setValueAtTime(fr, t + i * 0.045);
+        env(c, g, t + i * 0.045, 0.005, 0.12, 0.22);
+        o.connect(g).connect(c.destination);
+        o.start(t + i * 0.045); o.stop(t + i * 0.045 + 0.25);
+      });
+    },
+    // 부장님 신음
+    grunt(pitch = 1) {
+      const c = ac(), t = c.currentTime;
+      const o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(190 * pitch, t);
+      o.frequency.exponentialRampToValueAtTime(90 * pitch, t + 0.22);
+      f.type = 'lowpass'; f.frequency.value = 900;
+      env(c, g, t, 0.02, 0.28, 0.26);
+      o.connect(f).connect(g).connect(c.destination);
+      o.start(t); o.stop(t + 0.3);
+    },
+    // 툭 (빗나감/바닥)
+    thud() {
+      const c = ac(), t = c.currentTime;
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(120, t);
+      o.frequency.exponentialRampToValueAtTime(50, t + 0.08);
+      env(c, g, t, 0.004, 0.35, 0.1);
+      o.connect(g).connect(c.destination);
+      o.start(t); o.stop(t + 0.12);
+    },
+    // 콤보 띠링
+    combo(step = 0) {
+      const c = ac(), t = c.currentTime;
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = 'triangle';
+      o.frequency.value = 620 * Math.pow(1.13, Math.min(step, 10));
+      env(c, g, t, 0.005, 0.22, 0.16);
+      o.connect(g).connect(c.destination);
+      o.start(t); o.stop(t + 0.18);
+    },
+    // KO 팡파레
+    fanfare() {
+      const c = ac(), t = c.currentTime;
+      [523, 659, 784, 1046].forEach((fr, i) => {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = 'square';
+        o.frequency.value = fr;
+        env(c, g, t + i * 0.11, 0.01, 0.16, i === 3 ? 0.5 : 0.14);
+        o.connect(g).connect(c.destination);
+        o.start(t + i * 0.11); o.stop(t + i * 0.11 + 0.55);
+      });
+    },
+    // 콰콰쾅 폭발
+    explosion() {
+      const c = ac(), t = c.currentTime;
+      // 저음 붐
+      const o = c.createOscillator(), og = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(110, t);
+      o.frequency.exponentialRampToValueAtTime(24, t + 0.9);
+      env(c, og, t, 0.01, 1.1, 1.0);
+      o.connect(og).connect(c.destination);
+      o.start(t); o.stop(t + 1.1);
+      // 노이즈 콰쾅
+      const n = noise(c), nf = c.createBiquadFilter(), ng = c.createGain();
+      nf.type = 'lowpass';
+      nf.frequency.setValueAtTime(8000, t);
+      nf.frequency.exponentialRampToValueAtTime(120, t + 0.85);
+      env(c, ng, t, 0.008, 0.95, 0.95);
+      n.connect(nf).connect(ng).connect(c.destination);
+      n.start(t); n.stop(t + 1.1);
+      // 잔해 후두둑
+      for (let i = 0; i < 5; i++) {
+        const d = 0.25 + i * rand(0.08, 0.16);
+        const o2 = c.createOscillator(), g2 = c.createGain();
+        o2.type = 'sine';
+        o2.frequency.setValueAtTime(rand(90, 220), t + d);
+        o2.frequency.exponentialRampToValueAtTime(40, t + d + 0.07);
+        env(c, g2, t + d, 0.004, 0.18, 0.09);
+        o2.connect(g2).connect(c.destination);
+        o2.start(t + d); o2.stop(t + d + 0.11);
+      }
+    }
+  };
+})();
+document.addEventListener('pointerdown', () => SFX.unlock(), { once: true });
+
+/* ═══════════════════ 탭 전환 ═══════════════════ */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === btn.dataset.tab));
+    if (btn.dataset.tab === 'throwScreen') Throw.layout();
+  });
+});
+
+/* ═══════════════════ 파티클 & 텍스트 이펙트 ═══════════════════ */
+function fxText(parent, x, y, text, size, color) {
+  const el = document.createElement('div');
+  el.className = 'fx-text';
+  el.textContent = text;
+  el.style.cssText = `left:${x}px; top:${y}px; font-size:${size}px; color:${color};`;
+  parent.appendChild(el);
+  setTimeout(() => el.remove(), 950);
+}
+
+function burstParticles(parent, x, y, emojis, count, speed) {
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'particle';
+    el.textContent = pick(emojis);
+    const size = rand(14, 30);
+    el.style.cssText = `left:${x}px; top:${y}px; font-size:${size}px;`;
+    parent.appendChild(el);
+    const ang = rand(0, Math.PI * 2);
+    const v = rand(speed * 0.35, speed);
+    let vx = Math.cos(ang) * v, vy = Math.sin(ang) * v - speed * 0.45;
+    let px = 0, py = 0, rot = rand(-180, 180), life = 1;
+    const tick = () => {
+      vy += 0.55; px += vx; py += vy; life -= 0.02; rot += vx * 2;
+      el.style.transform = `translate(${px}px, ${py}px) rotate(${rot}deg)`;
+      el.style.opacity = Math.max(life, 0);
+      if (life > 0) requestAnimationFrame(tick);
+      else el.remove();
+    };
+    requestAnimationFrame(tick);
+  }
+}
+
+function shake(el, cls) {
+  el.classList.remove('shake-s', 'shake-m', 'shake-l');
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
+/* ═══════════════════ 게임 1: 사직서 던지기 ═══════════════════ */
+const Throw = (() => {
+  const screen = $('#throwScreen');
+  const paper = $('#paper');
+  const bossWrap = $('#bossWrap');
+  const bossHead = $('#bossHead');
+  const bubble = $('#bubble');
+  const canvas = $('#aimLine');
+  const cx2d = canvas.getContext('2d');
+  const flash = $('#flash');
+
+  const MAX_MENTAL = 100;
+  let mental = MAX_MENTAL;
+  let hits = +(localStorage.getItem('hitCount') || 0);
+  let combo = 0, bestCombo = +(localStorage.getItem('bestCombo') || 0);
+  let comboTimer = null;
+  let bossLevel = 1;
+
+  $('#hitCount').textContent = fmt(hits);
+  $('#bestCombo').textContent = fmt(bestCombo);
+
+  // 사무실 배경 이모지
+  (() => {
+    const deco = $('#officeDeco');
+    const items = ['🖥️', '📠', '🪴', '☕', '📚', '🗄️', '⏰'];
+    items.forEach((em, i) => {
+      const s = document.createElement('span');
+      s.textContent = em;
+      s.style.left = (5 + i * 14 + rand(-3, 3)) + '%';
+      s.style.top = (i % 2 ? 58 : 63) + rand(-2, 2) + '%';
+      deco.appendChild(s);
+    });
+  })();
+
+  const TAUNTS = [
+    '김대리, 주말에 뭐 해? 등산 갈래?', '요즘 애들은 근성이 없어~',
+    '이게 최선이야? 확실해?', '내가 자네 나이 땐 말이야…',
+    '오늘 야근이지? 다들 알지?', '퇴근? 벌써? 6시밖에 안 됐는데?',
+    '보고서 폰트가 마음에 안 들어', 'MZ라서 그런가~ 허허',
+    '회식은 업무의 연장이야 😤', '내일 아침 7시 회의 잡았어',
+  ];
+  const HIT_WEAK = ['앗 따가', '어이쿠?', '뭐야 지금', '이게 뭐야', '허허 장난이…'];
+  const HIT_MID = ['으억!!', '아이쿠!!', '커헉!', '왜 이러나 자네!', '내, 내 안경!'];
+  const HIT_CRIT = ['끄아아악!!!', '사, 사장님…', '내가 뭘 잘못했다고!!', '어지러워…', '엄마…'];
+  const MISS_TAUNTS = ['에이~ 그것밖에 못 던져?', '조준 실력하고는 쯧쯧', '헛손질~ 헛손질~', '그러니까 승진을 못 하지'];
+  const KO_SUBS = [
+    '부장님이 조퇴하셨습니다.\n오늘의 사이다 지수: 💯',
+    '부장님: "나… 재택근무 할게…"',
+    '부장님이 멘탈을 찾으러 퇴근했습니다.',
+    '인사팀에서 새 부장님을 발령했습니다. 무한리필!',
+  ];
+
+  // 물리 상태
+  let homeX = 0, homeY = 0;
+  let dragging = false, flying = false;
+  let px = 0, py = 0, vx = 0, vy = 0, rot = 0, vrot = 0;
+  let samples = [], flightStart = 0;
+  const GRAV = 0.55;
+  const MAX_SPEED = 65, FLIGHT_TIMEOUT = 3000;
+
+  function layout() {
+    canvas.width = screen.clientWidth;
+    canvas.height = screen.clientHeight;
+    homeX = screen.clientWidth / 2 - 37;
+    homeY = screen.clientHeight * 0.72;
+    if (!dragging && !flying) resetPaper();
+  }
+
+  function resetPaper() {
+    flying = false;
+    px = homeX; py = homeY; rot = 0;
+    paper.style.transition = 'transform .25s';
+    render();
+    setTimeout(() => paper.style.transition = '', 260);
+  }
+
+  function render() {
+    paper.style.transform = `translate(${px}px, ${py}px) rotate(${rot}deg)`;
+  }
+  // transform 기반이라 left/top은 0 고정
+  paper.style.left = '0px'; paper.style.top = '0px';
+
+  function say(text, ms = 1800) {
+    bubble.textContent = text;
+    bubble.classList.add('show');
+    clearTimeout(say._t);
+    say._t = setTimeout(() => bubble.classList.remove('show'), ms);
+  }
+
+  function setFace(state) {
+    const show = (id, on) => $(id).style.display = on ? '' : 'none';
+    show('#eyesOpen', state === 'idle');
+    show('#eyesHit', state === 'hit');
+    show('#eyesDizzy', state === 'dizzy' || state === 'ko');
+    show('#sweat', state === 'hit' || state === 'dizzy');
+    show('#stars', state === 'dizzy' || state === 'ko');
+    show('#blush', state !== 'idle');
+    const mouth = $('#mouth');
+    if (state === 'idle') mouth.setAttribute('d', 'M78 156 Q100 146 122 156');           // 능글 미소
+    else if (state === 'hit') mouth.setAttribute('d', 'M82 160 Q100 172 118 160');        // 울상
+    else mouth.setAttribute('d', 'M88 158 a12 9 0 1 0 24 0 a12 9 0 1 0 -24 0');           // 벌린 입
+    // 눈썹
+    $('#browL').setAttribute('d', state === 'idle' ? 'M55 92 L85 98' : 'M55 100 L85 90');
+    $('#browR').setAttribute('d', state === 'idle' ? 'M145 92 L115 98' : 'M145 100 L115 90');
+  }
+
+  function bossRect() {
+    // 얼굴(머리) 영역 판정 — 어느 방향에서 날아와도 맞도록 여유 있게
+    const r = bossWrap.getBoundingClientRect();
+    const sr = screen.getBoundingClientRect();
+    return {
+      x: r.left - sr.left + r.width * 0.06,
+      y: r.top - sr.top - r.height * 0.04,
+      w: r.width * 0.88,
+      h: r.height * 0.72,
+    };
+  }
+
+  // 부장님 아이들 애니메이션 (도발)
+  setInterval(() => {
+    if (!flying && !dragging && mental > 0 && !bubble.classList.contains('show')) {
+      if (Math.random() < 0.5) say(pick(TAUNTS), 2200);
+    }
+  }, 3500);
+
+  // 둥실둥실
+  let bobT = 0;
+  (function bob() {
+    bobT += 0.03;
+    if (mental > 0) bossWrap.style.transform = `translateX(-50%) translateY(${Math.sin(bobT) * 6}px)`;
+    requestAnimationFrame(bob);
+  })();
+
+  /* ── 드래그 & 던지기 ── */
+  function pointerPos(e) {
+    const sr = screen.getBoundingClientRect();
+    return { x: e.clientX - sr.left, y: e.clientY - sr.top };
+  }
+
+  paper.addEventListener('pointerdown', e => {
+    if (flying) return;
+    e.preventDefault();
+    dragging = true;
+    samples = [];
+    try { paper.setPointerCapture(e.pointerId); } catch (err) {}
+    $('#throwHint').style.display = 'none';
+  });
+
+  paper.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const p = pointerPos(e);
+    px = p.x - 37; py = p.y - 48;
+    rot = clamp((p.x - (homeX + 37)) * 0.15, -30, 30);
+    samples.push({ x: p.x, y: p.y, t: performance.now() });
+    if (samples.length > 6) samples.shift();
+    render();
+    drawAim();
+  });
+
+  paper.addEventListener('pointerup', e => {
+    if (!dragging) return;
+    dragging = false;
+    cx2d.clearRect(0, 0, canvas.width, canvas.height);
+    // 릴리즈 직전 120ms 구간 샘플로 속도 계산 (멈칫해도 플릭 속도가 정확하게)
+    if (samples.length >= 2) {
+      const end = samples[samples.length - 1];
+      let first = samples[samples.length - 2];
+      for (let i = samples.length - 2; i >= 0; i--) {
+        if (end.t - samples[i].t > 120) break;
+        first = samples[i];
+      }
+      const dt = Math.max(end.t - first.t, 16);
+      vx = (end.x - first.x) / dt * 16;
+      vy = (end.y - first.y) / dt * 16;
+    } else { vx = 0; vy = 0; }
+    let speed = Math.hypot(vx, vy);
+    if (speed < 6) { resetPaper(); return; } // 너무 약하면 제자리
+    if (speed > MAX_SPEED) { vx *= MAX_SPEED / speed; vy *= MAX_SPEED / speed; speed = MAX_SPEED; }
+    flying = true;
+    flightStart = performance.now();
+    vrot = vx * 1.2 + rand(-6, 6);
+    SFX.whoosh(speed / 30);
+    fly();
+  });
+
+  function drawAim() {
+    cx2d.clearRect(0, 0, canvas.width, canvas.height);
+    if (samples.length < 2) return;
+    const a = samples[0], b = samples[samples.length - 1];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    cx2d.strokeStyle = 'rgba(255,216,61,.7)';
+    cx2d.lineWidth = 3;
+    cx2d.setLineDash([8, 8]);
+    cx2d.beginPath();
+    cx2d.moveTo(px + 37, py + 48);
+    cx2d.lineTo(px + 37 + dx * 2.2, py + 48 + dy * 2.2);
+    cx2d.stroke();
+  }
+
+  function fly() {
+    if (!flying) return;
+    vy += GRAV;
+    rot += vrot;
+
+    // 서브스텝 스윕 충돌: 빠른 사직서가 얼굴을 통과(터널링)하지 못하게 이동을 잘게 쪼개 검사
+    const speed = Math.hypot(vx, vy);
+    const steps = Math.max(1, Math.ceil(speed / 14));
+    const r = bossRect();
+    for (let i = 0; i < steps; i++) {
+      px += vx / steps; py += vy / steps;
+      const cx = px + 37, cy = py + 48;
+      if (mental > 0 && cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h) {
+        render();
+        onHit(speed, cx, cy);
+        return;
+      }
+    }
+    render();
+
+    // 화면 밖(아래/좌우) 또는 비행 시간 초과 → 미스
+    if (py > screen.clientHeight + 60 || px < -140 || px > screen.clientWidth + 60
+        || performance.now() - flightStart > FLIGHT_TIMEOUT) {
+      onMiss();
+      return;
+    }
+    requestAnimationFrame(fly);
+  }
+
+  function onMiss() {
+    flying = false;
+    SFX.thud();
+    if (combo > 0) { combo = 0; updateHud(); }
+    if (mental > 0) { say(pick(MISS_TAUNTS)); setFace('idle'); }
+    resetPaper();
+  }
+
+  function onHit(speed, hx, hy) {
+    flying = false;
+    // 파워 티어: speed 기준
+    const power = clamp(speed / 38, 0.3, 2);
+    const isCrit = speed > 46 || (combo >= 4 && speed > 34);
+    const tier = isCrit ? 2 : speed > 26 ? 1 : 0;
+
+    hits++;
+    combo++;
+    if (combo > bestCombo) { bestCombo = combo; localStorage.setItem('bestCombo', bestCombo); }
+    localStorage.setItem('hitCount', hits);
+    clearTimeout(comboTimer);
+    comboTimer = setTimeout(() => { combo = 0; updateHud(); }, 3500);
+    updateHud();
+
+    const dmg = tier === 2 ? rand(22, 30) : tier === 1 ? rand(12, 17) : rand(5, 8);
+    mental = clamp(mental - dmg * (1 + combo * 0.04), 0, MAX_MENTAL);
+    $('#mentalFill').style.width = (mental / MAX_MENTAL * 100) + '%';
+
+    // 연출
+    if (tier === 2) {
+      SFX.crit(); SFX.grunt(0.8);
+      shake(screen, 'shake-l');
+      flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+      fxText(screen, hx, hy - 30, '크리티컬!!', 34, '#ff4757');
+      fxText(screen, hx + rand(-40, 40), hy - 80, '-' + Math.round(dmg), 26, '#ffd83d');
+      burstParticles(screen, hx, hy, ['💥', '⭐', '💢', '😵'], 14, 13);
+      setFace('dizzy');
+      say(pick(HIT_CRIT), 1500);
+      vibrate([60, 40, 80]);
+    } else if (tier === 1) {
+      SFX.hit(1.2); SFX.grunt(1);
+      shake(screen, 'shake-m');
+      fxText(screen, hx, hy - 26, pick(['퍽!', '빡!', '착!']), 28, '#ffd83d');
+      fxText(screen, hx + rand(-30, 30), hy - 66, '-' + Math.round(dmg), 20, '#fff');
+      burstParticles(screen, hx, hy, ['💢', '💦', '📄'], 8, 9);
+      setFace('hit');
+      say(pick(HIT_MID), 1300);
+      vibrate(50);
+    } else {
+      SFX.hit(0.6);
+      shake(screen, 'shake-s');
+      fxText(screen, hx, hy - 22, '톡', 20, '#cfd3ec');
+      burstParticles(screen, hx, hy, ['💦', '📄'], 4, 6);
+      setFace('hit');
+      say(pick(HIT_WEAK), 1200);
+      vibrate(25);
+    }
+
+    if (combo >= 2) {
+      SFX.combo(combo);
+      fxText(screen, screen.clientWidth / 2, screen.clientHeight * 0.16, combo + ' COMBO!', 22 + Math.min(combo * 2, 20), '#7bffb2');
+    }
+
+    // 부장님 얼굴 밀림
+    bossHead.style.transition = 'transform .08s';
+    bossHead.style.transform = `translate(${rand(-14, 14)}px, ${rand(2, 10)}px) rotate(${rand(-9, 9)}deg)`;
+    setTimeout(() => {
+      bossHead.style.transition = 'transform .3s';
+      bossHead.style.transform = '';
+    }, 90);
+
+    if (mental <= 0) { setTimeout(ko, 500); }
+    else setTimeout(() => { if (!flying) setFace('idle'); }, 1100);
+
+    resetPaper();
+  }
+
+  function updateHud() {
+    $('#hitCount').textContent = fmt(hits);
+    $('#comboCount').textContent = combo;
+    $('#bestCombo').textContent = fmt(bestCombo);
+  }
+
+  function ko() {
+    SFX.fanfare();
+    setFace('ko');
+    bossWrap.style.transition = 'transform .8s';
+    bossWrap.style.transform = 'translateX(-50%) translateY(30px) rotate(90deg)';
+    burstParticles(screen, screen.clientWidth / 2, screen.clientHeight * 0.35, ['🎉', '⭐', '💫', '👏'], 20, 12);
+    vibrate([80, 60, 80, 60, 150]);
+    setTimeout(() => {
+      $('#koSub').textContent = pick(KO_SUBS);
+      $('#koOverlay').classList.add('show');
+    }, 900);
+  }
+
+  $('#koRetry').addEventListener('click', () => {
+    $('#koOverlay').classList.remove('show');
+    bossLevel++;
+    mental = MAX_MENTAL;
+    $('#mentalFill').style.width = '100%';
+    $('#mentalLabel').textContent = `부장님 멘탈 (${bossLevel}대째)`;
+    bossWrap.style.transition = 'transform .4s';
+    bossWrap.style.transform = 'translateX(-50%)';
+    setFace('idle');
+    say('신임 부장이다. 잘 부탁해~ 참, 오늘 야근이야.', 2500);
+  });
+
+  window.addEventListener('resize', layout);
+  layout();
+  setFace('idle');
+
+  return { layout };
+})();
+
+/* ═══════════════════ 게임 2: 회사 폭파 ═══════════════════ */
+const Boom = (() => {
+  const screen = $('#boomScreen');
+  const building = $('#mainBuilding');
+  const rubble = $('#rubble');
+  const btn = $('#quitBtn');
+  const boomFlash = $('#boomFlash');
+
+  let myCount = +(localStorage.getItem('boomCount') || 0);
+  let rebuilding = false;
+  let rapidClicks = 0, rapidTimer = null;
+
+  // 창문 생성 (일부는 야근 중이라 불 켜짐)
+  (() => {
+    const g = $('#windows');
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 4; col++) {
+        const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        r.setAttribute('x', 92 + col * 30);
+        r.setAttribute('y', 84 + row * 27);
+        r.setAttribute('width', 20);
+        r.setAttribute('height', 17);
+        r.setAttribute('rx', 2);
+        r.setAttribute('fill', Math.random() < 0.55 ? '#ffe082' : '#222b4d');
+        g.appendChild(r);
+      }
+    }
+  })();
+
+  /* 전국 통계 (실시간 집계: counterapi.dev 공용 카운터, 한국 시간 기준 일별) */
+  const STAT_API = 'https://api.counterapi.dev/v1/fired-quit-sim';
+  const kstDay = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date()).replace(/-/g, '');
+  let natPeople = null, natBooms = null;
+
+  async function apiCount(name, up = false) {
+    const res = await fetch(`${STAT_API}/${name}${up ? '/up' : ''}`);
+    if (!res.ok) { if (res.status === 404) return 0; throw new Error('stat api ' + res.status); }
+    return (await res.json()).count;
+  }
+
+  async function fetchStats() {
+    try {
+      const d = kstDay();
+      const [b, p] = await Promise.all([apiCount('booms-' + d), apiCount('people-' + d)]);
+      natBooms = b; natPeople = p;
+    } catch (e) { /* 오프라인이면 마지막 값 유지 */ }
+    renderStats();
+  }
+
+  // 폭파 1회 = 전국 카운트 +1, 오늘 첫 폭파면 참여자 +1
+  function reportBoom() {
+    const d = kstDay();
+    apiCount('booms-' + d, true).then(c => { natBooms = c; renderStats(); }).catch(() => {});
+    if (localStorage.getItem('joinedDay') !== d) {
+      localStorage.setItem('joinedDay', d);
+      apiCount('people-' + d, true).then(c => { natPeople = c; renderStats(); }).catch(() => {});
+    }
+  }
+
+  function renderStats() {
+    $('#natLine').innerHTML = natBooms === null
+      ? '전국 집계 서버 연결 중… 📡'
+      : `오늘 전국 직장인 <b>${fmt(natPeople)}</b>명이<br>회사를 <b>${fmt(natBooms)}</b>번 파괴했습니다`;
+    $('#myLine').innerHTML = `내 파괴 횟수: <b>${fmt(myCount)}회</b> ${title(myCount)}`;
+  }
+
+  function title(n) {
+    if (n >= 500) return '· 칭호: 퇴사神 👑';
+    if (n >= 200) return '· 칭호: 파괴왕 💀';
+    if (n >= 100) return '· 칭호: 폭파반장 🧨';
+    if (n >= 50) return '· 칭호: 상습퇴사범 🚨';
+    if (n >= 10) return '· 칭호: 퇴사꿈나무 🌱';
+    return '';
+  }
+
+  const BOOM_MSGS = [
+    '사표는 원래 품에 넣고 다니는 것',
+    '속이 다 시원~하다!',
+    '내일은 더 세게 터뜨릴 수 있어',
+    '월요일도 함께 폭파해 드립니다',
+    '야근 수당은 챙기고 터뜨리셨나요?',
+    '상쾌한 퇴사의 맛 🍹',
+    '회사는 내일 아침 자동 재건축됩니다',
+    '부장님은 안전하게 대피했습니다 (아쉽)',
+  ];
+  const MILESTONES = { 10: '🌱 퇴사꿈나무 달성!', 50: '🚨 상습퇴사범 달성!', 100: '🧨 폭파반장 달성!', 200: '💀 파괴왕 달성!', 500: '👑 퇴사神 달성!!' };
+
+  btn.addEventListener('click', () => {
+    if (rebuilding) return;
+    explode();
+  });
+
+  function explode() {
+    rebuilding = true;
+    myCount++;
+    localStorage.setItem('boomCount', myCount);
+    reportBoom();
+
+    // 연타 카운트
+    rapidClicks++;
+    clearTimeout(rapidTimer);
+    rapidTimer = setTimeout(() => rapidClicks = 0, 4000);
+
+    SFX.explosion();
+    vibrate([100, 50, 200]);
+    shake(screen, 'shake-l');
+    boomFlash.classList.remove('go'); void boomFlash.offsetWidth; boomFlash.classList.add('go');
+
+    const cw = $('#cityWrap').getBoundingClientRect();
+    const sr = screen.getBoundingClientRect();
+    const cx = cw.left - sr.left + cw.width / 2;
+    const cy = cw.top - sr.top + cw.height / 2;
+    burstParticles(screen, cx, cy, ['💥', '🔥', '🧱', '💸', '📊', '🪑', '💻', '📁'], 26, 16);
+    burstParticles(screen, cx, cy - 40, ['💥', '🔥', '💨'], 10, 10);
+    fxText(screen, cx, cy - 60, pick(['콰콰쾅!!!', '펑!!!', '두두둥!!!']), 40, '#ffd83d');
+
+    building.style.transition = 'transform .18s, opacity .3s';
+    building.style.transform = 'scale(1.06)';
+    setTimeout(() => {
+      building.style.transform = 'scale(.2) translateY(200px)';
+      building.style.opacity = '0';
+      rubble.style.display = '';
+    }, 160);
+
+    renderStats();
+    $('#comboBoomText').textContent = rapidClicks >= 3
+      ? `🔥 ${rapidClicks}연속 폭파 중! 화력이 미쳤다!!`
+      : pick(BOOM_MSGS);
+
+    if (MILESTONES[myCount]) {
+      setTimeout(() => {
+        SFX.fanfare();
+        const m = $('#milestone');
+        m.textContent = MILESTONES[myCount];
+        m.classList.remove('show'); void m.offsetWidth; m.classList.add('show');
+        burstParticles(screen, screen.clientWidth / 2, screen.clientHeight * 0.3, ['🎉', '👑', '⭐'], 18, 12);
+      }, 700);
+    }
+
+    // 재건축
+    setTimeout(() => {
+      rubble.style.display = 'none';
+      building.style.transition = 'transform .5s cubic-bezier(.2,1.6,.4,1), opacity .3s';
+      building.style.transform = 'scale(1)';
+      building.style.opacity = '1';
+      SFX.combo(3);
+      rebuilding = false;
+    }, 1400);
+  }
+
+  renderStats();
+  fetchStats();
+  setInterval(fetchStats, 20000); // 실시간 집계 주기 갱신
+
+  return {};
+})();
+</script>
+</body>
+</html>
