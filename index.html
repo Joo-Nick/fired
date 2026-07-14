@@ -40,8 +40,6 @@
   #throwScreen {
     background: linear-gradient(#2b3049 0%, #363c5c 55%, #23273a 55.2%, #1c1f30 100%);
   }
-  #officeDeco { position: absolute; inset: 0; pointer-events: none; opacity: .5; font-size: 28px; }
-  #officeDeco span { position: absolute; }
 
   #hud {
     position: absolute; top: 10px; left: 0; right: 0;
@@ -200,15 +198,11 @@
   #flash.go { animation: flashGo .3s; }
   @keyframes flashGo { 0%{opacity:.7} 100%{opacity:0} }
 
-  /* 상점 */
-  #shopBtn {
-    position: absolute; left: 10px; bottom: 56px; z-index: 25;
-    border: none; border-radius: 14px; cursor: pointer;
-    background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.18);
-    color: #ffd83d; font-weight: 900; font-size: 14px;
-    padding: 10px 14px; backdrop-filter: blur(4px);
-  }
+  /* 상점 버튼 (HUD 박스형) */
+  #shopBtn { pointer-events: auto; cursor: pointer; color: #ffd83d; font-family: inherit; }
   #shopBtn:active { transform: scale(.94); }
+  #shopBtn .hud-label { color: #ffd83d; }
+  #shopBtn .hud-val { font-size: 17px; }
   #shopOverlay {
     position: absolute; inset: 0; z-index: 70;
     background: rgba(10,10,20,.8); backdrop-filter: blur(3px);
@@ -335,17 +329,15 @@
 
   <!-- ═══ 게임 1 ═══ -->
   <div id="throwScreen" class="screen active">
-    <div id="officeDeco"></div>
-
     <div id="hud">
       <div class="hud-box">
         <div class="hud-label">명중</div>
         <div class="hud-val" id="hitCount">0</div>
       </div>
-      <div class="hud-box">
-        <div class="hud-label">콤보 (최고 <span id="bestCombo">0</span>)</div>
-        <div class="hud-val" id="comboCount">0</div>
-      </div>
+      <button class="hud-box" id="shopBtn">
+        <div class="hud-label">사내 매점 🛒</div>
+        <div class="hud-val"><span id="ciderAmt">0</span> 🥤</div>
+      </button>
       <div id="mentalWrap">
         <div id="mentalLabel">부장님 멘탈</div>
         <div id="mentalBar">
@@ -445,7 +437,6 @@
     <div id="throwHint">드래그로 던지거나 부장님을 터치! 장착한 무기가 날아갑니다 🎯<br>세게 던질수록 데미지 UP</div>
     <div id="flash"></div>
 
-    <button id="shopBtn">🛒 <span id="ciderAmt">0</span>🥤</button>
 
     <div id="shopOverlay">
       <div id="shopPanel">
@@ -772,7 +763,6 @@ const Throw = (() => {
   let comboTimer = null;
 
   $('#hitCount').textContent = fmt(hits);
-  $('#bestCombo').textContent = fmt(bestCombo);
 
   /* ── 재화(사이다) & 무기 상점 ── */
   // flight: throw(포물선 투척) / dart(직선, 꽂힘) / drop(하늘에서 내리찍기) / shot(즉발 사격)
@@ -801,25 +791,11 @@ const Throw = (() => {
     $('#shopCider').textContent = fmt(cider) + ' 🥤';
   }
 
-  function addCider(n, x, y) {
+  function addCider(n) {
     cider += n;
     saveShop();
     updateCider();
-    if (x !== undefined) fxText(screen, x + rand(-20, 20), y - 55, '+' + n + '🥤', 16, '#7bffb2');
   }
-
-  // 사무실 배경 이모지
-  (() => {
-    const deco = $('#officeDeco');
-    const items = ['🖥️', '📠', '🪴', '☕', '📚', '🗄️', '⏰'];
-    items.forEach((em, i) => {
-      const s = document.createElement('span');
-      s.textContent = em;
-      s.style.left = (5 + i * 14 + rand(-3, 3)) + '%';
-      s.style.top = (i % 2 ? 58 : 63) + rand(-2, 2) + '%';
-      deco.appendChild(s);
-    });
-  })();
 
   const TAUNTS = [
     '김대리, 주말에 뭐 해? 등산 갈래?', '요즘 애들은 근성이 없어~',
@@ -1063,10 +1039,7 @@ const Throw = (() => {
     localStorage.setItem('mental', mental);
     updateMental();
 
-    if (combo >= 2) {
-      SFX.combo(combo);
-      fxText(screen, screen.clientWidth / 2, screen.clientHeight * 0.16, combo + ' COMBO!', 22 + Math.min(combo * 2, 20), '#7bffb2');
-    }
+    if (combo >= 2) SFX.combo(combo);
 
     // 부장님 얼굴 밀림 (스윙이면 휘두른 방향으로 넉백)
     const kx = knockDir ? knockDir * rand(12, 20) : rand(-14, 14);
@@ -1110,22 +1083,20 @@ const Throw = (() => {
       shake(screen, 'shake-l');
       flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
       fxText(screen, hx, hy - 30, w.critText, 32, '#ff4757');
-      fxText(screen, hx + rand(-40, 40), hy - 80, '-' + Math.round(dmg), 26, '#ffd83d');
       burstParticles(screen, hx, hy, ['💥', '⭐', '💢', w.emoji], 14, 13);
       setFace('dizzy');
       say(pick(HIT_CRIT), 1500);
       vibrate([60, 40, 80]);
-      addCider(3, hx, hy);
+      addCider(3);
     } else if (tier === 1) {
       SFX.hit(1.1 + wIdx * 0.15); SFX.grunt(1);
       shake(screen, heavy ? 'shake-l' : 'shake-m');
       fxText(screen, hx, hy - 26, w.hitText, 28, '#ffd83d');
-      fxText(screen, hx + rand(-30, 30), hy - 66, '-' + Math.round(dmg), 20, '#fff');
       burstParticles(screen, hx, hy, ['💢', '💦', w.emoji], 8, 9);
       setFace('hit');
       if (Math.random() < 0.6) say(pick(HIT_MID), 1300);
       vibrate(50);
-      addCider(2, hx, hy);
+      addCider(2);
     } else {
       SFX.hit(0.6);
       shake(screen, 'shake-s');
@@ -1134,7 +1105,7 @@ const Throw = (() => {
       setFace('hit');
       say(pick(HIT_WEAK), 1200);
       vibrate(25);
-      addCider(1, hx, hy);
+      addCider(1);
     }
 
     registerHit(dmg);
@@ -1264,8 +1235,6 @@ const Throw = (() => {
 
   function updateHud() {
     $('#hitCount').textContent = fmt(hits);
-    $('#comboCount').textContent = combo;
-    $('#bestCombo').textContent = fmt(bestCombo);
   }
 
   function updateMental() {
