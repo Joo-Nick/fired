@@ -214,18 +214,6 @@
   .si-btn.equipped { background: transparent; color: #ffd83d; border: 1.5px solid #ffd83d; }
   #shopClose { padding: 12px; font-size: 15px; }
 
-  /* KO 오버레이 */
-  #koOverlay {
-    position: absolute; inset: 0; z-index: 60;
-    background: rgba(10,10,20,.82); backdrop-filter: blur(3px);
-    display: none; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; gap: 14px; padding: 20px;
-  }
-  #koOverlay.show { display: flex; animation: koIn .4s; }
-  @keyframes koIn { from{opacity:0; transform:scale(1.15)} to{opacity:1; transform:scale(1)} }
-  #koTitle { font-size: clamp(38px, 11vw, 72px); font-weight: 900; color: #ffd83d; text-shadow: 0 0 30px rgba(255,216,61,.6); }
-  #koSub { font-size: 17px; font-weight: 700; color: #dfe3ff; line-height: 1.5; white-space: pre-line; }
-  #koReward { font-size: 22px; font-weight: 900; color: #ffd83d; text-shadow: 0 0 16px rgba(255,216,61,.5); }
   .big-btn {
     border: none; border-radius: 16px; padding: 16px 34px;
     font-size: 18px; font-weight: 900; cursor: pointer;
@@ -427,13 +415,6 @@
     <div id="flash"></div>
 
     <button id="shopBtn">🛒 <span id="ciderAmt">0</span>🥤</button>
-
-    <div id="koOverlay">
-      <div id="koTitle">K.O.!</div>
-      <div id="koSub"></div>
-      <div id="koReward"></div>
-      <button class="big-btn" id="koRetry">다음 부장님 출근시키기 😈</button>
-    </div>
 
     <div id="shopOverlay">
       <div id="shopPanel">
@@ -701,13 +682,13 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 /* ═══════════════════ 파티클 & 텍스트 이펙트 ═══════════════════ */
-function fxText(parent, x, y, text, size, color) {
+function fxText(parent, x, y, text, size, color, dur = 900) {
   const el = document.createElement('div');
   el.className = 'fx-text';
   el.textContent = text;
-  el.style.cssText = `left:${x}px; top:${y}px; font-size:${size}px; color:${color};`;
+  el.style.cssText = `left:${x}px; top:${y}px; font-size:${size}px; color:${color}; animation-duration:${dur}ms;`;
   parent.appendChild(el);
-  setTimeout(() => el.remove(), 950);
+  setTimeout(() => el.remove(), dur + 60);
 }
 
 function burstParticles(parent, x, y, emojis, count, speed) {
@@ -1235,15 +1216,17 @@ const Throw = (() => {
     bossWrap.style.transform = 'translateX(-50%) translateY(30px) rotate(90deg)';
     burstParticles(screen, screen.clientWidth / 2, screen.clientHeight * 0.35, ['🎉', '⭐', '💫', '🥤', '💰'], 22, 12);
     vibrate([80, 60, 80, 60, 150]);
+    // 흐름 안 끊기게 오버레이 없이 연출만 띄우고 자동으로 다음 부장님 출근
     setTimeout(() => {
-      $('#koSub').textContent = pick(KO_SUBS);
-      $('#koReward').textContent = `위로금 +${fmt(reward)} 🥤`;
-      $('#koOverlay').classList.add('show');
-    }, 900);
+      const cw = screen.clientWidth, ch = screen.clientHeight;
+      fxText(screen, cw / 2, ch * 0.3, 'K.O.!', 62, '#ffd83d', 1500);
+      fxText(screen, cw / 2, ch * 0.44, pick(KO_SUBS).split('\n')[0], 17, '#dfe3ff', 1500);
+      fxText(screen, cw / 2, ch * 0.54, `위로금 +${fmt(reward)} 🥤`, 24, '#7bffb2', 1500);
+    }, 400);
+    setTimeout(nextBoss, 2000);
   }
 
-  $('#koRetry').addEventListener('click', () => {
-    $('#koOverlay').classList.remove('show');
+  function nextBoss() {
     bossLevel++;
     maxMental = 100 + (bossLevel - 1) * 30; // 세대가 바뀔수록 멘탈이 단단한 부장님 등장
     mental = maxMental;
@@ -1255,7 +1238,7 @@ const Throw = (() => {
     bossWrap.style.transform = 'translateX(-50%)';
     setFace('idle');
     say(`신임 부장이다. 멘탈 ${maxMental}짜리지. 잘 부탁해~ 참, 오늘 야근이야.`, 2500);
-  });
+  }
 
   /* ── 상점 UI ── */
   function renderShop() {
