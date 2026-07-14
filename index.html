@@ -158,6 +158,51 @@
   #flash.go { animation: flashGo .3s; }
   @keyframes flashGo { 0%{opacity:.7} 100%{opacity:0} }
 
+  /* 상점 */
+  #shopBtn {
+    position: absolute; left: 10px; bottom: 56px; z-index: 25;
+    border: none; border-radius: 14px; cursor: pointer;
+    background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.18);
+    color: #ffd83d; font-weight: 900; font-size: 14px;
+    padding: 10px 14px; backdrop-filter: blur(4px);
+  }
+  #shopBtn:active { transform: scale(.94); }
+  #shopOverlay {
+    position: absolute; inset: 0; z-index: 70;
+    background: rgba(10,10,20,.8); backdrop-filter: blur(3px);
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  #shopOverlay.show { display: flex; }
+  #shopPanel {
+    position: relative;
+    width: 100%; max-width: 420px; max-height: 86%;
+    background: #1d2133; border: 1px solid rgba(255,255,255,.14);
+    border-radius: 18px; padding: 14px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  #shopHead { display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 900; padding: 2px 4px; }
+  #shopHead span { color: #ffd83d; }
+  #shopList { overflow-y: auto; touch-action: pan-y; display: flex; flex-direction: column; gap: 8px; }
+  .shop-item {
+    display: flex; align-items: center; gap: 10px;
+    background: #262b42; border-radius: 14px; padding: 10px 12px;
+  }
+  .shop-item.equipped { outline: 2px solid #ffd83d; }
+  .si-emoji { font-size: 30px; flex-shrink: 0; }
+  .si-info { flex: 1; min-width: 0; }
+  .si-name { font-size: 14px; font-weight: 800; }
+  .si-dmg { font-size: 11px; color: #ff8a94; font-weight: 800; margin-left: 4px; }
+  .si-desc { font-size: 11.5px; color: #9aa0c0; margin-top: 2px; }
+  .si-btn {
+    flex-shrink: 0; border: none; border-radius: 10px; cursor: pointer;
+    padding: 9px 12px; font-size: 12.5px; font-weight: 900;
+    background: #ffd83d; color: #22253a; white-space: nowrap;
+  }
+  .si-btn.cant { background: #3a4059; color: #7d84a5; }
+  .si-btn.own { background: #2ecc71; color: #0e2b1b; }
+  .si-btn.equipped { background: transparent; color: #ffd83d; border: 1.5px solid #ffd83d; }
+  #shopClose { padding: 12px; font-size: 15px; }
+
   /* KO 오버레이 */
   #koOverlay {
     position: absolute; inset: 0; z-index: 60;
@@ -168,7 +213,8 @@
   #koOverlay.show { display: flex; animation: koIn .4s; }
   @keyframes koIn { from{opacity:0; transform:scale(1.15)} to{opacity:1; transform:scale(1)} }
   #koTitle { font-size: clamp(38px, 11vw, 72px); font-weight: 900; color: #ffd83d; text-shadow: 0 0 30px rgba(255,216,61,.6); }
-  #koSub { font-size: 17px; font-weight: 700; color: #dfe3ff; line-height: 1.5; }
+  #koSub { font-size: 17px; font-weight: 700; color: #dfe3ff; line-height: 1.5; white-space: pre-line; }
+  #koReward { font-size: 22px; font-weight: 900; color: #ffd83d; text-shadow: 0 0 16px rgba(255,216,61,.5); }
   .big-btn {
     border: none; border-radius: 16px; padding: 16px 34px;
     font-size: 18px; font-weight: 900; cursor: pointer;
@@ -365,13 +411,24 @@
       </svg>
     </div>
 
-    <div id="throwHint">사직서를 던지거나, 부장님을 눌러 주먹으로 때리세요! 👊<br>세게 던질수록 데미지 UP</div>
+    <div id="throwHint">사직서를 던지거나, 부장님을 눌러 때리세요! 👊<br>세게 던질수록 데미지 UP</div>
     <div id="flash"></div>
+
+    <button id="shopBtn">🛒 <span id="ciderAmt">0</span>🥤</button>
 
     <div id="koOverlay">
       <div id="koTitle">K.O.!</div>
       <div id="koSub"></div>
+      <div id="koReward"></div>
       <button class="big-btn" id="koRetry">다음 부장님 출근시키기 😈</button>
+    </div>
+
+    <div id="shopOverlay">
+      <div id="shopPanel">
+        <div id="shopHead">🛒 사내 매점 <span id="shopCider">0 🥤</span></div>
+        <div id="shopList"></div>
+        <button class="big-btn" id="shopClose">닫고 계속 조지기</button>
+      </div>
     </div>
   </div>
 
@@ -547,6 +604,18 @@ const SFX = (() => {
       o.connect(g).connect(c.destination);
       o.start(t); o.stop(t + 0.18);
     },
+    // 구매 짤랑~
+    buy() {
+      const c = ac(), t = c.currentTime;
+      [660, 990, 1320].forEach((fr, i) => {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = 'triangle';
+        o.frequency.value = fr;
+        env(c, g, t + i * 0.07, 0.005, 0.2, 0.18);
+        o.connect(g).connect(c.destination);
+        o.start(t + i * 0.07); o.stop(t + i * 0.07 + 0.2);
+      });
+    },
     // KO 팡파레
     fanfare() {
       const c = ac(), t = c.currentTime;
@@ -664,6 +733,39 @@ const Throw = (() => {
 
   $('#hitCount').textContent = fmt(hits);
   $('#bestCombo').textContent = fmt(bestCombo);
+
+  /* ── 재화(사이다) & 무기 상점 ── */
+  const WEAPONS = [
+    { id: 'fist',     emoji: '👊',  name: '맨주먹',        desc: '월급쟁이의 기본기',                    dmg: [7, 11],   price: 0 },
+    { id: 'pen',      emoji: '🖊️', name: '결재 볼펜',      desc: '반려당한 서류의 아픔을 그대로 돌려준다', dmg: [11, 16],  price: 150 },
+    { id: 'keyboard', emoji: '⌨️', name: '기계식 키보드',  desc: '청축 타건음과 함께 터지는 손맛',        dmg: [15, 22],  price: 400 },
+    { id: 'bat',      emoji: '🏏',  name: '야근 몽둥이',    desc: '야근 근절 특별 대책위원회 공식 지급품',  dmg: [20, 28],  price: 900 },
+    { id: 'chair',    emoji: '🪑',  name: '사무용 의자',    desc: '회전의자 풀스윙, 모든 회사원의 로망',    dmg: [26, 35],  price: 1600 },
+    { id: 'gun',      emoji: '🔫',  name: '고무줄 권총',    desc: '탕비실의 전설적인 저격수',              dmg: [33, 44],  price: 2800 },
+    { id: 'brief',    emoji: '💼',  name: '서류가방 풀스윙', desc: '인사팀도 못 막는 직장인 최종병기',      dmg: [42, 55],  price: 4500 },
+  ];
+  let cider = +(localStorage.getItem('cider') || 0);
+  let owned = JSON.parse(localStorage.getItem('weapons') || '["fist"]');
+  let equipId = localStorage.getItem('equip') || 'fist';
+  const weapon = () => WEAPONS.find(w => w.id === equipId) || WEAPONS[0];
+
+  function saveShop() {
+    localStorage.setItem('cider', cider);
+    localStorage.setItem('weapons', JSON.stringify(owned));
+    localStorage.setItem('equip', equipId);
+  }
+
+  function updateCider() {
+    $('#ciderAmt').textContent = fmt(cider);
+    $('#shopCider').textContent = fmt(cider) + ' 🥤';
+  }
+
+  function addCider(n, x, y) {
+    cider += n;
+    saveShop();
+    updateCider();
+    if (x !== undefined) fxText(screen, x + rand(-20, 20), y - 55, '+' + n + '🥤', 16, '#7bffb2');
+  }
 
   // 사무실 배경 이모지
   (() => {
@@ -943,6 +1045,7 @@ const Throw = (() => {
       setFace('dizzy');
       say(pick(HIT_CRIT), 1500);
       vibrate([60, 40, 80]);
+      addCider(3, hx, hy);
     } else if (tier === 1) {
       SFX.hit(1.2); SFX.grunt(1);
       shake(screen, 'shake-m');
@@ -952,6 +1055,7 @@ const Throw = (() => {
       setFace('hit');
       say(pick(HIT_MID), 1300);
       vibrate(50);
+      addCider(2, hx, hy);
     } else {
       SFX.hit(0.6);
       shake(screen, 'shake-s');
@@ -960,6 +1064,7 @@ const Throw = (() => {
       setFace('hit');
       say(pick(HIT_WEAK), 1200);
       vibrate(25);
+      addCider(1, hx, hy);
     }
 
     registerHit(dmg);
@@ -985,30 +1090,34 @@ const Throw = (() => {
     clearTimeout(punchChainTimer);
     punchChainTimer = setTimeout(() => punchChain = 0, 900);
     const isCrit = (punchChain >= 5 && punchChain % 5 === 0) || Math.random() < 0.12;
+    const w = weapon();
+    const wIdx = WEAPONS.indexOf(w);
 
     const fist = document.createElement('div');
     fist.className = 'fist';
-    fist.textContent = pick(['👊', '🤛', '🤜']);
+    fist.textContent = w.id === 'fist' ? pick(['👊', '🤛', '🤜']) : w.emoji;
     fist.style.left = x + 'px';
     fist.style.top = y + 'px';
     screen.appendChild(fist);
     setTimeout(() => fist.remove(), 380);
 
-    SFX.whoosh(0.9);
-    setTimeout(() => { // 주먹이 꽂히는 타이밍(애니메이션 30% 지점)에 타격
+    SFX.whoosh(0.9 + wIdx * 0.1);
+    setTimeout(() => { // 무기가 꽂히는 타이밍(애니메이션 30% 지점)에 타격
       if (mental <= 0) return;
+      const base = rand(w.dmg[0], w.dmg[1]);
       if (isCrit) {
         SFX.crit(); SFX.grunt(0.75);
         shake(screen, 'shake-l');
         flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
-        fxText(screen, x, y - 34, pick(['카운터 펀치!!', '어퍼컷!!', '핵주먹!!']), 32, '#ff4757');
-        burstParticles(screen, x, y, ['💥', '⭐', '💢'], 12, 12);
+        fxText(screen, x, y - 34, w.id === 'fist' ? pick(['카운터 펀치!!', '어퍼컷!!', '핵주먹!!']) : `${w.name} 크리티컬!!`, 32, '#ff4757');
+        burstParticles(screen, x, y, ['💥', '⭐', '💢', w.emoji], 12, 12);
         setFace('dizzy');
         say(pick(HIT_CRIT), 1400);
         vibrate([50, 30, 70]);
-        registerHit(rand(16, 22));
+        addCider(3, x, y);
+        registerHit(base * 1.9);
       } else {
-        SFX.hit(1.4);
+        SFX.hit(1.2 + wIdx * 0.15);
         if (Math.random() < 0.5) SFX.grunt(1.05);
         shake(screen, 'shake-m');
         fxText(screen, x + rand(-8, 8), y - 26, pick(['퍽!', '빡!', '억!']), 26, '#ffd83d');
@@ -1016,7 +1125,8 @@ const Throw = (() => {
         setFace('hit');
         if (Math.random() < 0.35) say(pick(HIT_MID), 1100);
         vibrate(35);
-        registerHit(rand(7, 11));
+        addCider(1, x, y);
+        registerHit(base);
       }
     }, 100);
   }
@@ -1035,12 +1145,15 @@ const Throw = (() => {
   function ko() {
     SFX.fanfare();
     setFace('ko');
+    const reward = 100 + (bossLevel - 1) * 50; // 위로금: 세대가 높을수록 두둑하게
+    addCider(reward);
     bossWrap.style.transition = 'transform .8s';
     bossWrap.style.transform = 'translateX(-50%) translateY(30px) rotate(90deg)';
-    burstParticles(screen, screen.clientWidth / 2, screen.clientHeight * 0.35, ['🎉', '⭐', '💫', '👏'], 20, 12);
+    burstParticles(screen, screen.clientWidth / 2, screen.clientHeight * 0.35, ['🎉', '⭐', '💫', '🥤', '💰'], 22, 12);
     vibrate([80, 60, 80, 60, 150]);
     setTimeout(() => {
       $('#koSub').textContent = pick(KO_SUBS);
+      $('#koReward').textContent = `위로금 +${fmt(reward)} 🥤`;
       $('#koOverlay').classList.add('show');
     }, 900);
   }
@@ -1060,10 +1173,67 @@ const Throw = (() => {
     say(`신임 부장이다. 멘탈 ${maxMental}짜리지. 잘 부탁해~ 참, 오늘 야근이야.`, 2500);
   });
 
+  /* ── 상점 UI ── */
+  function renderShop() {
+    const list = $('#shopList');
+    list.innerHTML = '';
+    WEAPONS.forEach(w => {
+      const isOwned = owned.includes(w.id);
+      const isEquipped = equipId === w.id;
+      const row = document.createElement('div');
+      row.className = 'shop-item' + (isEquipped ? ' equipped' : '');
+      row.innerHTML = `
+        <div class="si-emoji">${w.emoji}</div>
+        <div class="si-info">
+          <div class="si-name">${w.name} <span class="si-dmg">DMG ${w.dmg[0]}~${w.dmg[1]}</span></div>
+          <div class="si-desc">${w.desc}</div>
+        </div>`;
+      const btn = document.createElement('button');
+      btn.className = 'si-btn';
+      if (isEquipped) { btn.textContent = '장착중'; btn.classList.add('equipped'); btn.disabled = true; }
+      else if (isOwned) { btn.textContent = '장착'; btn.classList.add('own'); }
+      else { btn.textContent = fmt(w.price) + ' 🥤'; if (cider < w.price) btn.classList.add('cant'); }
+      btn.addEventListener('click', () => {
+        if (isOwned) {
+          equipId = w.id;
+          saveShop();
+          SFX.combo(4);
+          renderShop();
+        } else if (cider >= w.price) {
+          cider -= w.price;
+          owned.push(w.id);
+          equipId = w.id;
+          saveShop();
+          updateCider();
+          SFX.buy();
+          vibrate(40);
+          fxText($('#shopPanel'), $('#shopPanel').clientWidth / 2, 60, `${w.emoji} ${w.name} 획득!`, 22, '#ffd83d');
+          renderShop();
+        } else {
+          SFX.thud();
+          fxText($('#shopPanel'), $('#shopPanel').clientWidth / 2, 60, '사이다가 부족합니다 😢', 16, '#ff8a94');
+        }
+      });
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  }
+
+  $('#shopBtn').addEventListener('click', () => {
+    renderShop();
+    updateCider();
+    $('#shopOverlay').classList.add('show');
+  });
+  $('#shopClose').addEventListener('click', () => $('#shopOverlay').classList.remove('show'));
+  $('#shopOverlay').addEventListener('pointerdown', e => {
+    if (e.target === $('#shopOverlay')) $('#shopOverlay').classList.remove('show');
+  });
+
   window.addEventListener('resize', layout);
   layout();
   setFace('idle');
   updateMental();
+  updateCider();
   if (bossLevel > 1) $('#mentalLabel').textContent = `부장님 멘탈 (${bossLevel}대째)`;
 
   return { layout };
