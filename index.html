@@ -135,15 +135,46 @@
     align-items: center; justify-content: center;
     font-size: 56px; line-height: 1;
   }
-  /* 볼펜: 얼굴에 꽂혀서 부들부들 */
-  .stuck-pen { position: absolute; z-index: 36; font-size: 36px; pointer-events: none; animation: stuckWobble .85s forwards; }
+  /* 볼펜: 정수리에 수직으로 꽂혀서 부들부들 */
+  .stuck-pen { position: absolute; z-index: 36; font-size: 38px; pointer-events: none; animation: stuckWobble 1s forwards; }
   @keyframes stuckWobble {
-    0%   { transform: translate(-30%, -85%) rotate(56deg); opacity: 1; }
-    16%  { transform: translate(-30%, -85%) rotate(36deg); }
-    34%  { transform: translate(-30%, -85%) rotate(48deg); }
-    52%  { transform: translate(-30%, -85%) rotate(41deg); }
-    75%  { transform: translate(-30%, -85%) rotate(44deg); opacity: 1; }
-    100% { transform: translate(-30%, -60%) rotate(44deg); opacity: 0; }
+    0%   { transform: translate(-50%, -94%) rotate(-62deg); opacity: 1; }
+    14%  { transform: translate(-50%, -94%) rotate(-32deg); }
+    30%  { transform: translate(-50%, -94%) rotate(-54deg); }
+    46%  { transform: translate(-50%, -94%) rotate(-40deg); }
+    62%  { transform: translate(-50%, -94%) rotate(-48deg); }
+    82%  { transform: translate(-50%, -94%) rotate(-45deg); opacity: 1; }
+    100% { transform: translate(-50%, -120%) rotate(-45deg); opacity: 0; }
+  }
+
+  /* 몽둥이: 오른쪽 → 왼쪽 풀스윙 */
+  .swing-side {
+    position: absolute; z-index: 38; pointer-events: none;
+    font-size: 74px; line-height: 1;
+    animation: swingSide .3s cubic-bezier(.4,.05,.2,1) forwards;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,.5));
+  }
+  @keyframes swingSide {
+    0%   { transform: translate(calc(-50% + 130px), calc(-50% - 70px)) rotate(80deg) scale(1.05); opacity: 0; }
+    22%  { transform: translate(calc(-50% + 95px), calc(-50% - 45px)) rotate(55deg) scale(1.1); opacity: 1; }
+    50%  { transform: translate(-50%, -50%) rotate(-15deg) scale(1.2); opacity: 1; } /* 임팩트 */
+    78%  { transform: translate(calc(-50% - 95px), calc(-50% - 40px)) rotate(-70deg) scale(1.1); opacity: 1; }
+    100% { transform: translate(calc(-50% - 140px), calc(-50% - 75px)) rotate(-95deg) scale(1); opacity: 0; }
+  }
+
+  /* 키보드: 머리 위에서 휘둘러 내리찍는 스매시 */
+  .swing-smash {
+    position: absolute; z-index: 38; pointer-events: none;
+    font-size: 68px; line-height: 1;
+    animation: swingSmash .32s cubic-bezier(.5,.05,.3,1) forwards;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,.5));
+  }
+  @keyframes swingSmash {
+    0%   { transform: translate(calc(-50% + 95px), calc(-50% - 150px)) rotate(65deg) scale(1); opacity: 0; }
+    25%  { transform: translate(calc(-50% + 60px), calc(-50% - 105px)) rotate(40deg) scale(1.08); opacity: 1; }
+    58%  { transform: translate(-50%, calc(-50% - 4px)) rotate(-8deg) scale(1.18); opacity: 1; } /* 임팩트 */
+    72%  { transform: translate(calc(-50% - 5px), calc(-50% + 3px)) rotate(3deg) scale(1.1); }
+    100% { transform: translate(calc(-50% - 14px), calc(-50% - 10px)) rotate(-6deg) scale(1); opacity: 0; }
   }
   /* 권총: 탄환 트레이서 */
   .tracer {
@@ -747,9 +778,9 @@ const Throw = (() => {
   // flight: throw(포물선 투척) / dart(직선, 꽂힘) / drop(하늘에서 내리찍기) / shot(즉발 사격)
   const WEAPONS = [
     { id: 'fist',     emoji: '📄',  name: '사직서',         desc: '월급쟁이의 기본기, 정성껏 접어 던진다',   dmg: [7, 11],   price: 0,    flight: 'throw', spin: 1,   size: 0,  hitText: '착!',   critText: '사직서 크리티컬!!' },
-    { id: 'pen',      emoji: '🖊️', name: '결재 볼펜',      desc: '다트처럼 날아가 얼굴에 그대로 꽂힌다',    dmg: [11, 16],  price: 150,  flight: 'dart',  spin: 0,   size: 46, hitText: '콕!',   critText: '정수리 관통!!' },
-    { id: 'keyboard', emoji: '⌨️', name: '기계식 키보드',  desc: '하늘에서 청축 풀타건으로 내리찍는다',     dmg: [15, 22],  price: 400,  flight: 'drop',  spin: 0,   size: 58, hitText: '쾅!',   critText: '풀타건 스매시!!' },
-    { id: 'bat',      emoji: '🏏',  name: '야근 몽둥이',    desc: '빙글빙글 회전하며 날아가는 야근 근절봉',  dmg: [20, 28],  price: 900,  flight: 'throw', spin: 2.2, size: 56, hitText: '빠각!', critText: '홈런!!' },
+    { id: 'pen',      emoji: '🖊️', name: '결재 볼펜',      desc: '던지면 정수리에 그대로 꽂힌다',           dmg: [11, 16],  price: 150,  flight: 'dart',  spin: 0,   size: 46, hitText: '콕!',   critText: '정수리 관통!!' },
+    { id: 'keyboard', emoji: '⌨️', name: '기계식 키보드',  desc: '머리 위에서 풀타건으로 휘둘러 내리찍는다', dmg: [15, 22],  price: 400,  flight: 'swing', swing: 'smash', spin: 0, size: 58, hitText: '쾅!',   critText: '풀타건 스매시!!' },
+    { id: 'bat',      emoji: '🏏',  name: '야근 몽둥이',    desc: '오른쪽에서 왼쪽으로 시원하게 풀스윙',      dmg: [20, 28],  price: 900,  flight: 'swing', swing: 'side',  spin: 2.2, size: 56, hitText: '빠각!', critText: '홈런!!' },
     { id: 'chair',    emoji: '🪑',  name: '사무용 의자',    desc: '회전의자 풀스윙, 모든 회사원의 로망',     dmg: [26, 35],  price: 1600, flight: 'throw', spin: 1.6, size: 64, hitText: '콰당!', critText: '체어샷!!' },
     { id: 'gun',      emoji: '🔫',  name: '고무줄 권총',    desc: '즉발 사격! 탕비실의 전설적인 저격수',     dmg: [33, 44],  price: 2800, flight: 'shot',  spin: 0,   size: 52, hitText: '탕!',   critText: '헤드샷!!' },
     { id: 'brief',    emoji: '💼',  name: '서류가방 풀스윙', desc: '인사팀도 못 막는 직장인 최종병기',        dmg: [42, 55],  price: 4500, flight: 'throw', spin: 2.6, size: 60, hitText: '퍼엉!', critText: '월급날 풀스윙!!' },
@@ -817,6 +848,8 @@ const Throw = (() => {
   const MAX_SPEED = 65, FLIGHT_TIMEOUT = 3000;
   let projGrav = GRAV;                    // 발사 방식별 중력 (다트/낙하/투척)
   let throwMode = 'drag', autoCrit = false; // 터치 자동 투척 여부
+  let strikeTarget = null;                // 자동 투척의 조준점 (도달하면 명중)
+  let knockDir = 0;                       // 스윙 방향에 따른 머리 넉백 (-1: 왼쪽)
 
   function layout() {
     canvas.width = screen.clientWidth;
@@ -944,6 +977,7 @@ const Throw = (() => {
     flying = true;
     throwMode = 'drag';
     projGrav = GRAV;
+    strikeTarget = null;
     flightStart = performance.now();
     vrot = (vx * 1.2 + rand(-6, 6)) * (weapon().spin || 1);
     SFX.whoosh(speed / 30);
@@ -985,7 +1019,11 @@ const Throw = (() => {
     for (let i = 0; i < steps; i++) {
       px += vx / steps; py += vy / steps;
       const cx = px + 37, cy = py + 48;
-      if (mental > 0 && cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h) {
+      // 자동 투척은 조준점 도달로, 드래그는 얼굴 영역 진입으로 명중 판정
+      const hitNow = strikeTarget
+        ? Math.hypot(cx - strikeTarget.x, cy - strikeTarget.y) < 28
+        : (cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h);
+      if (mental > 0 && hitNow) {
         render();
         onHit(speed, cx, cy);
         return;
@@ -1004,6 +1042,7 @@ const Throw = (() => {
 
   function onMiss() {
     flying = false;
+    strikeTarget = null;
     SFX.thud();
     if (combo > 0) { combo = 0; updateHud(); }
     if (mental > 0) { say(pick(MISS_TAUNTS)); setFace('idle'); }
@@ -1029,9 +1068,12 @@ const Throw = (() => {
       fxText(screen, screen.clientWidth / 2, screen.clientHeight * 0.16, combo + ' COMBO!', 22 + Math.min(combo * 2, 20), '#7bffb2');
     }
 
-    // 부장님 얼굴 밀림
+    // 부장님 얼굴 밀림 (스윙이면 휘두른 방향으로 넉백)
+    const kx = knockDir ? knockDir * rand(12, 20) : rand(-14, 14);
+    const kr = knockDir ? knockDir * rand(5, 11) : rand(-9, 9);
+    knockDir = 0;
     bossHead.style.transition = 'transform .08s';
-    bossHead.style.transform = `translate(${rand(-14, 14)}px, ${rand(2, 10)}px) rotate(${rand(-9, 9)}deg)`;
+    bossHead.style.transform = `translate(${kx}px, ${rand(2, 10)}px) rotate(${kr}deg)`;
     setTimeout(() => {
       bossHead.style.transition = 'transform .3s';
       bossHead.style.transform = '';
@@ -1043,6 +1085,7 @@ const Throw = (() => {
 
   function onHit(speed, hx, hy) {
     flying = false;
+    strikeTarget = null;
     const w = weapon();
     const wIdx = WEAPONS.indexOf(w);
     // 티어/데미지: 드래그는 던진 속도 기준, 터치 자동 투척은 무기 기본 데미지
@@ -1156,33 +1199,56 @@ const Throw = (() => {
       return;
     }
 
+    // 근접 스윙: 몽둥이는 옆에서 풀스윙, 키보드는 머리 위에서 휘둘러 내리찍기
+    if (w.flight === 'swing') {
+      const impactDelay = w.swing === 'side' ? 150 : 185; // 스윙 궤적의 임팩트 지점 타이밍
+      SFX.whoosh(1.4);
+      swingFx(w, tx, ty);
+      setTimeout(() => {
+        if (mental <= 0) return;
+        throwMode = 'auto';
+        knockDir = w.swing === 'side' ? -1 : 0;
+        onHit(50, tx, ty);
+      }, impactDelay);
+      return;
+    }
+
     if (flying) return; // 투사체는 한 번에 하나
     flying = true;
     throwMode = 'auto';
     flightStart = performance.now();
 
-    if (w.flight === 'drop') {
-      // 키보드: 하늘에서 목표 지점으로 내리찍기
-      px = tx - 37; py = -110;
-      vx = 0; vy = 9; projGrav = 1.6;
-      rot = 0; vrot = rand(-2, 2);
-    } else if (w.flight === 'dart') {
-      // 볼펜: 직선 다트, 펜촉이 목표를 향함
+    if (w.flight === 'dart') {
+      // 볼펜: 어디를 노리든 정수리를 향해 직선으로 날아가 꽂힌다
+      tx = fr.x + fr.w / 2 + rand(-16, 16);
+      ty = fr.y + fr.h * 0.18 + rand(-6, 6);
       px = homeX; py = homeY;
       const dx = tx - (px + 37), dy = ty - (py + 48), d = Math.hypot(dx, dy) || 1;
       vx = dx / d * 55; vy = dy / d * 55; projGrav = 0.05;
       rot = Math.atan2(dy, dx) * 180 / Math.PI + 45; vrot = 0;
     } else {
-      // 투척(사직서/몽둥이/의자/가방): 손에서 목표로 빠른 포물선
+      // 투척(사직서/의자/가방): 손에서 목표로 빠른 포물선
       px = homeX; py = homeY;
       const dx = tx - (px + 37), dy = ty - (py + 48), d = Math.hypot(dx, dy) || 1;
       const s = 40;
       vx = dx / d * s; vy = dy / d * s - 3; projGrav = 0.3;
       vrot = (w.spin || 1) * 14 * (Math.random() < 0.5 ? -1 : 1);
     }
+    strikeTarget = { x: tx, y: ty }; // 조준점 도달 시 명중
     SFX.whoosh(1 + WEAPONS.indexOf(w) * 0.08);
     render();
     fly();
+  }
+
+  // 근접 스윙 연출 (몽둥이/키보드)
+  function swingFx(w, x, y) {
+    const el = document.createElement('div');
+    el.className = w.swing === 'side' ? 'swing-side' : 'swing-smash';
+    el.textContent = w.emoji;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    screen.appendChild(el);
+    setTimeout(() => el.remove(), 420);
   }
 
   // 장착 무기에 따라 투사체 비주얼 교체 (사직서 ↔ 무기 이모지)
