@@ -990,7 +990,8 @@ const Boom = (() => {
   let natPeople = null, natBooms = null;
 
   async function apiCount(name, up = false) {
-    const res = await fetch(`${STAT_API}/${name}${up ? '/up' : ''}`);
+    // 읽기 경로는 끝 슬래시 필수: 없으면 301 리다이렉트가 CORS 헤더 없이 내려와 fetch가 실패함
+    const res = await fetch(`${STAT_API}/${name}${up ? '/up' : '/'}`);
     if (!res.ok) { if (res.status === 404) return 0; throw new Error('stat api ' + res.status); }
     return (await res.json()).count;
   }
