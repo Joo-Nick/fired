@@ -1,6 +1,6 @@
-# 퇴사 시뮬레이터 🔥
+# 상사 패기 🔥
 
-직장인 스트레스 해소용 미니게임 2종. 의존성 없는 단일 `index.html` — 웹/모바일 겸용.
+부장님에게 사직서와 온갖 무기를 날리는 직장인 스트레스 해소 게임. 의존성 없는 단일 `index.html` — 웹/모바일 겸용.
 
 ## 게임
 
@@ -26,3 +26,12 @@ npx serve .
 ```
 
 사운드는 전부 Web Audio API 합성이라 오디오 파일이 없고, 캐릭터는 인라인 SVG입니다.
+
+## 이벤트 트래킹
+
+- **페이지뷰**: Vercel Web Analytics (무료). Vercel 대시보드 → 프로젝트 → **Analytics** 탭에서 Enable 한 번만 누르면 자동 집계됩니다.
+- **커스텀 이벤트**: [Mixpanel](https://mixpanel.com) (무료 플랜: 월 100만 이벤트). Vercel 무료 플랜은 커스텀 이벤트를 지원하지 않아 Mixpanel을 씁니다.
+  1. Mixpanel 프로젝트를 만들고 **Project Token**을 복사
+  2. `index.html`의 `const MIXPANEL_TOKEN = ''` 에 토큰을 붙여넣고 재배포
+  - 수집 이벤트: `app_open`, `boss_ko`(세대·무기), `weapon_purchased`(무기·가격), `weapon_equipped`, `shop_opened`
+  - 토큰이 비어 있으면 트래킹은 조용히 꺼지고 게임은 그대로 동작합니다.

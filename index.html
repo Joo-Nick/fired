@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>퇴사 시뮬레이터 🔥</title>
+<title>상사 패기 🔥</title>
+<meta name="description" content="상사 패기 — 부장님에게 사직서와 온갖 무기를 날리는 직장인 스트레스 해소 게임">
+<!-- Vercel Web Analytics (무료 페이지뷰). 대시보드에서 Analytics 켜면 자동 집계 -->
+<script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script>
+<script defer src="/_vercel/insights/script.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
@@ -514,6 +518,40 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const fmt = n => n.toLocaleString('ko-KR');
 const vibrate = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 
+/* ═══════════════════ 이벤트 트래킹 ═══════════════════ */
+/* Mixpanel(무료 플랜: 월 100만 이벤트, 커스텀 이벤트 지원)로 게임 이벤트를 집계한다.
+   👉 아래 MIXPANEL_TOKEN 에 본인 프로젝트 토큰만 붙여넣으면 바로 켜진다.
+   (Mixpanel → Settings → Project Settings → Project Token)
+   토큰이 비어 있으면 트래킹은 조용히 비활성화되고, 게임은 그대로 동작한다.
+   페이지뷰는 Vercel Web Analytics(무료)가 별도로 집계한다. */
+const MIXPANEL_TOKEN = ''; // ← 여기에 Mixpanel 프로젝트 토큰 붙여넣기
+const Track = (() => {
+  let ready = false;
+  const queue = [];
+  if (MIXPANEL_TOKEN) {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/mixpanel-browser@2.55.1/dist/mixpanel.min.js';
+    s.onload = () => {
+      try {
+        mixpanel.init(MIXPANEL_TOKEN, { track_pageview: true, persistence: 'localStorage' });
+        ready = true;
+        queue.splice(0).forEach(([n, p]) => { try { mixpanel.track(n, p); } catch (e) {} });
+      } catch (e) {}
+    };
+    s.onerror = () => { queue.length = 0; };
+    document.head.appendChild(s);
+  }
+  return (name, props = {}) => {
+    // Mixpanel: 커스텀 이벤트 (준비 전이면 큐잉)
+    if (MIXPANEL_TOKEN) {
+      if (ready) { try { mixpanel.track(name, props); } catch (e) {} }
+      else if (queue.length < 50) queue.push([name, props]);
+    }
+    // Vercel Web Analytics 커스텀 이벤트(Pro 전용이지만 호출은 무해)
+    try { window.va && window.va('event', { name, data: props }); } catch (e) {}
+  };
+})();
+
 /* ═══════════════════ 사운드 엔진 (Web Audio 합성) ═══════════════════ */
 const SFX = (() => {
   let ctx = null;
@@ -693,6 +731,9 @@ const SFX = (() => {
   };
 })();
 document.addEventListener('pointerdown', () => SFX.unlock(), { once: true });
+
+// 앱 진입 이벤트 (복귀 유저 판별용으로 저장된 부장님 세대도 함께)
+Track('app_open', { boss_level: +(localStorage.getItem('bossLevel') || 1), returning: !!localStorage.getItem('hitCount') });
 
 /* ═══════════════════ 탭 전환 ═══════════════════ */
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1269,6 +1310,7 @@ const Throw = (() => {
     setFace('ko');
     const reward = 100 + (bossLevel - 1) * 50; // 위로금: 세대가 높을수록 두둑하게
     addCider(reward);
+    Track('boss_ko', { level: bossLevel, weapon: equipId, total_hits: hits });
     bossWrap.style.transition = 'transform .8s';
     bossWrap.style.transform = 'translateX(-50%) translateY(30px) rotate(90deg)';
     burstParticles(screen, screen.clientWidth / 2, screen.clientHeight * 0.35, ['🎉', '⭐', '💫', '🥤', '💰'], 22, 12);
@@ -1322,6 +1364,7 @@ const Throw = (() => {
           equipId = w.id;
           saveShop();
           updateProjectile();
+          Track('weapon_equipped', { weapon: w.id });
           SFX.combo(4);
           renderShop();
         } else if (cider >= w.price) {
@@ -1329,6 +1372,7 @@ const Throw = (() => {
           owned.push(w.id);
           equipId = w.id;
           saveShop();
+          Track('weapon_purchased', { weapon: w.id, price: w.price, boss_level: bossLevel });
           updateProjectile();
           updateCider();
           SFX.buy();
@@ -1349,6 +1393,7 @@ const Throw = (() => {
     renderShop();
     updateCider();
     $('#shopOverlay').classList.add('show');
+    Track('shop_opened', { cider });
   });
   $('#shopClose').addEventListener('click', () => $('#shopOverlay').classList.remove('show'));
   $('#shopOverlay').addEventListener('pointerdown', e => {
