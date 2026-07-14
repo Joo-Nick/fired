@@ -118,6 +118,22 @@
   }
   .particle { position: absolute; z-index: 35; pointer-events: none; will-change: transform, opacity; }
 
+  /* 주먹 펀치 */
+  #bossWrap { cursor: pointer; }
+  .fist {
+    position: absolute; z-index: 38; pointer-events: none;
+    font-size: 52px; line-height: 1;
+    transform: translate(-50%, -50%);
+    animation: fistIn .32s cubic-bezier(.2, 1.8, .4, 1) forwards;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,.45));
+  }
+  @keyframes fistIn {
+    0%   { transform: translate(30%, 120%) scale(2.3) rotate(38deg); opacity: 0; }
+    30%  { transform: translate(-50%, -50%) scale(1) rotate(-12deg); opacity: 1; }
+    65%  { transform: translate(-50%, -50%) scale(.9) rotate(-6deg); opacity: 1; }
+    100% { transform: translate(-42%, -38%) scale(.88) rotate(0deg); opacity: 0; }
+  }
+
   /* 화면 흔들림/플래시 */
   .shake-s { animation: shakeS .25s; }
   .shake-m { animation: shakeM .35s; }
@@ -336,7 +352,7 @@
       </svg>
     </div>
 
-    <div id="throwHint">사직서를 잡고 부장님 얼굴로 던지세요! 🎯<br>세게 던질수록 데미지 UP</div>
+    <div id="throwHint">사직서를 던지거나, 부장님을 눌러 주먹으로 때리세요! 👊<br>세게 던질수록 데미지 UP</div>
     <div id="flash"></div>
 
     <div id="koOverlay">
@@ -849,13 +865,8 @@ const Throw = (() => {
     resetPaper();
   }
 
-  function onHit(speed, hx, hy) {
-    flying = false;
-    // 파워 티어: speed 기준
-    const power = clamp(speed / 38, 0.3, 2);
-    const isCrit = speed > 46 || (combo >= 4 && speed > 34);
-    const tier = isCrit ? 2 : speed > 26 ? 1 : 0;
-
+  // 명중 공통 처리: 카운트/콤보/멘탈/넉백/KO (사직서·주먹 공용)
+  function registerHit(dmg) {
     hits++;
     combo++;
     if (combo > bestCombo) { bestCombo = combo; localStorage.setItem('bestCombo', bestCombo); }
@@ -864,9 +875,32 @@ const Throw = (() => {
     comboTimer = setTimeout(() => { combo = 0; updateHud(); }, 3500);
     updateHud();
 
-    const dmg = tier === 2 ? rand(22, 30) : tier === 1 ? rand(12, 17) : rand(5, 8);
     mental = clamp(mental - dmg * (1 + combo * 0.04), 0, MAX_MENTAL);
     $('#mentalFill').style.width = (mental / MAX_MENTAL * 100) + '%';
+
+    if (combo >= 2) {
+      SFX.combo(combo);
+      fxText(screen, screen.clientWidth / 2, screen.clientHeight * 0.16, combo + ' COMBO!', 22 + Math.min(combo * 2, 20), '#7bffb2');
+    }
+
+    // 부장님 얼굴 밀림
+    bossHead.style.transition = 'transform .08s';
+    bossHead.style.transform = `translate(${rand(-14, 14)}px, ${rand(2, 10)}px) rotate(${rand(-9, 9)}deg)`;
+    setTimeout(() => {
+      bossHead.style.transition = 'transform .3s';
+      bossHead.style.transform = '';
+    }, 90);
+
+    if (mental <= 0) { setTimeout(ko, 500); }
+    else setTimeout(() => { if (!flying) setFace('idle'); }, 1100);
+  }
+
+  function onHit(speed, hx, hy) {
+    flying = false;
+    // 파워 티어: speed 기준
+    const isCrit = speed > 46 || (combo >= 4 && speed > 34);
+    const tier = isCrit ? 2 : speed > 26 ? 1 : 0;
+    const dmg = tier === 2 ? rand(22, 30) : tier === 1 ? rand(12, 17) : rand(5, 8);
 
     // 연출
     if (tier === 2) {
@@ -898,23 +932,63 @@ const Throw = (() => {
       vibrate(25);
     }
 
-    if (combo >= 2) {
-      SFX.combo(combo);
-      fxText(screen, screen.clientWidth / 2, screen.clientHeight * 0.16, combo + ' COMBO!', 22 + Math.min(combo * 2, 20), '#7bffb2');
-    }
-
-    // 부장님 얼굴 밀림
-    bossHead.style.transition = 'transform .08s';
-    bossHead.style.transform = `translate(${rand(-14, 14)}px, ${rand(2, 10)}px) rotate(${rand(-9, 9)}deg)`;
-    setTimeout(() => {
-      bossHead.style.transition = 'transform .3s';
-      bossHead.style.transform = '';
-    }, 90);
-
-    if (mental <= 0) { setTimeout(ko, 500); }
-    else setTimeout(() => { if (!flying) setFace('idle'); }, 1100);
-
+    registerHit(dmg);
     resetPaper();
+  }
+
+  /* ── 주먹 펀치: 부장님을 클릭/탭해서 직접 타격 ── */
+  let lastPunch = 0, punchChain = 0, punchChainTimer = null;
+
+  bossWrap.addEventListener('pointerdown', e => {
+    if (dragging || mental <= 0) return;
+    const now = performance.now();
+    if (now - lastPunch < 120) return; // 이벤트 스팸 방지 (연타는 허용)
+    lastPunch = now;
+    e.preventDefault();
+    $('#throwHint').style.display = 'none';
+    const p = pointerPos(e);
+    punch(p.x, p.y);
+  });
+
+  function punch(x, y) {
+    punchChain++;
+    clearTimeout(punchChainTimer);
+    punchChainTimer = setTimeout(() => punchChain = 0, 900);
+    const isCrit = (punchChain >= 5 && punchChain % 5 === 0) || Math.random() < 0.12;
+
+    const fist = document.createElement('div');
+    fist.className = 'fist';
+    fist.textContent = pick(['👊', '🤛', '🤜']);
+    fist.style.left = x + 'px';
+    fist.style.top = y + 'px';
+    screen.appendChild(fist);
+    setTimeout(() => fist.remove(), 380);
+
+    SFX.whoosh(0.9);
+    setTimeout(() => { // 주먹이 꽂히는 타이밍(애니메이션 30% 지점)에 타격
+      if (mental <= 0) return;
+      if (isCrit) {
+        SFX.crit(); SFX.grunt(0.75);
+        shake(screen, 'shake-l');
+        flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+        fxText(screen, x, y - 34, pick(['카운터 펀치!!', '어퍼컷!!', '핵주먹!!']), 32, '#ff4757');
+        burstParticles(screen, x, y, ['💥', '⭐', '💢'], 12, 12);
+        setFace('dizzy');
+        say(pick(HIT_CRIT), 1400);
+        vibrate([50, 30, 70]);
+        registerHit(rand(16, 22));
+      } else {
+        SFX.hit(1.4);
+        if (Math.random() < 0.5) SFX.grunt(1.05);
+        shake(screen, 'shake-m');
+        fxText(screen, x + rand(-8, 8), y - 26, pick(['퍽!', '빡!', '억!']), 26, '#ffd83d');
+        burstParticles(screen, x, y, ['💢', '💥', '💦'], 6, 9);
+        setFace('hit');
+        if (Math.random() < 0.35) say(pick(HIT_MID), 1100);
+        vibrate(35);
+        registerHit(rand(7, 11));
+      }
+    }, 100);
   }
 
   function updateHud() {
