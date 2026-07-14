@@ -43,18 +43,23 @@
 
   #hud {
     position: absolute; top: 10px; left: 0; right: 0;
-    display: flex; justify-content: space-between; align-items: flex-start;
-    padding: 0 14px; pointer-events: none; z-index: 20;
+    display: flex; align-items: stretch; gap: 8px;
+    padding: 0 10px; pointer-events: none; z-index: 20;
   }
-  .hud-box { background: rgba(0,0,0,.35); border-radius: 12px; padding: 8px 12px; backdrop-filter: blur(4px); }
+  .hud-box { background: rgba(0,0,0,.35); border-radius: 12px; padding: 8px 12px; backdrop-filter: blur(4px); flex-shrink: 0; }
   .hud-label { font-size: 11px; color: #9aa0c0; font-weight: 700; }
   .hud-val { font-size: 20px; font-weight: 900; color: #ffd83d; line-height: 1.1; }
 
-  /* 부장님 멘탈 게이지 */
-  #mentalWrap { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: min(46vw, 220px); z-index: 20; pointer-events: none; }
-  #mentalLabel { text-align: center; font-size: 11px; font-weight: 800; color: #cfd3ec; margin-bottom: 4px; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
-  #mentalBar { height: 14px; background: rgba(0,0,0,.5); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,.2); }
-  #mentalFill { height: 100%; width: 100%; border-radius: 8px; background: linear-gradient(90deg,#2ecc71,#f1c40f,#ff4757); transition: width .25s; }
+  /* 부장님 멘탈 게이지 (HUD 가운데, 어떤 화면 폭에서도 안 겹치게 flex로 배치) */
+  #mentalWrap { flex: 1; min-width: 0; align-self: center; }
+  #mentalLabel { text-align: center; font-size: 11px; font-weight: 800; color: #cfd3ec; margin-bottom: 4px; text-shadow: 0 1px 3px rgba(0,0,0,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #mentalBar { position: relative; height: 17px; background: rgba(0,0,0,.5); border-radius: 9px; overflow: hidden; border: 1px solid rgba(255,255,255,.2); }
+  #mentalFill { height: 100%; width: 100%; border-radius: 9px; background: linear-gradient(90deg,#2ecc71,#f1c40f,#ff4757); transition: width .25s; }
+  #mentalNum {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 900; color: #fff; letter-spacing: .5px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.9);
+  }
 
   #bossWrap {
     position: absolute; left: 50%; top: 24%;
@@ -94,7 +99,7 @@
   #aimLine { position: absolute; inset: 0; z-index: 14; pointer-events: none; }
 
   #throwHint {
-    position: absolute; bottom: 12%; left: 50%; transform: translateX(-50%);
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
     color: #aab0d5; font-size: 13px; font-weight: 700; text-align: center;
     pointer-events: none; z-index: 10; animation: hintPulse 1.6s infinite;
     text-shadow: 0 2px 6px rgba(0,0,0,.7); width: 90vw;
@@ -257,15 +262,17 @@
         <div class="hud-label">명중</div>
         <div class="hud-val" id="hitCount">0</div>
       </div>
+      <div id="mentalWrap">
+        <div id="mentalLabel">부장님 멘탈</div>
+        <div id="mentalBar">
+          <div id="mentalFill"></div>
+          <div id="mentalNum">100 / 100</div>
+        </div>
+      </div>
       <div class="hud-box" style="text-align:right">
         <div class="hud-label">콤보 (최고 <span id="bestCombo">0</span>)</div>
         <div class="hud-val" id="comboCount">0</div>
       </div>
-    </div>
-
-    <div id="mentalWrap">
-      <div id="mentalLabel">부장님 멘탈</div>
-      <div id="mentalBar"><div id="mentalFill"></div></div>
     </div>
 
     <div id="bubble"></div>
@@ -640,8 +647,8 @@ const Throw = (() => {
   const cx2d = canvas.getContext('2d');
   const flash = $('#flash');
 
-  const MAX_MENTAL = 100;
-  let mental = MAX_MENTAL;
+  let maxMental = 100; // 부장님 세대(레벨)가 올라갈수록 +30씩 증가
+  let mental = maxMental;
   let hits = +(localStorage.getItem('hitCount') || 0);
   let combo = 0, bestCombo = +(localStorage.getItem('bestCombo') || 0);
   let comboTimer = null;
@@ -875,8 +882,8 @@ const Throw = (() => {
     comboTimer = setTimeout(() => { combo = 0; updateHud(); }, 3500);
     updateHud();
 
-    mental = clamp(mental - dmg * (1 + combo * 0.04), 0, MAX_MENTAL);
-    $('#mentalFill').style.width = (mental / MAX_MENTAL * 100) + '%';
+    mental = clamp(mental - dmg * (1 + combo * 0.04), 0, maxMental);
+    updateMental();
 
     if (combo >= 2) {
       SFX.combo(combo);
@@ -997,6 +1004,11 @@ const Throw = (() => {
     $('#bestCombo').textContent = fmt(bestCombo);
   }
 
+  function updateMental() {
+    $('#mentalFill').style.width = (mental / maxMental * 100) + '%';
+    $('#mentalNum').textContent = Math.ceil(mental) + ' / ' + maxMental;
+  }
+
   function ko() {
     SFX.fanfare();
     setFace('ko');
@@ -1013,18 +1025,20 @@ const Throw = (() => {
   $('#koRetry').addEventListener('click', () => {
     $('#koOverlay').classList.remove('show');
     bossLevel++;
-    mental = MAX_MENTAL;
-    $('#mentalFill').style.width = '100%';
+    maxMental = 100 + (bossLevel - 1) * 30; // 세대가 바뀔수록 멘탈이 단단한 부장님 등장
+    mental = maxMental;
+    updateMental();
     $('#mentalLabel').textContent = `부장님 멘탈 (${bossLevel}대째)`;
     bossWrap.style.transition = 'transform .4s';
     bossWrap.style.transform = 'translateX(-50%)';
     setFace('idle');
-    say('신임 부장이다. 잘 부탁해~ 참, 오늘 야근이야.', 2500);
+    say(`신임 부장이다. 멘탈 ${maxMental}짜리지. 잘 부탁해~ 참, 오늘 야근이야.`, 2500);
   });
 
   window.addEventListener('resize', layout);
   layout();
   setFace('idle');
+  updateMental();
 
   return { layout };
 })();
