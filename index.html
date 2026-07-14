@@ -20,8 +20,9 @@
   #app { height: 100%; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; box-shadow: 0 0 44px rgba(0,0,0,.6); }
 
   /* ── 탭 ── */
+  /* 회사 폭파 게임은 추후 별도 개발 예정 — 탭 바 숨김 */
   #tabs {
-    display: flex; gap: 8px; padding: 10px 12px;
+    display: none; gap: 8px; padding: 10px 12px;
     background: #1b1e2b; z-index: 50;
   }
   .tab-btn {
@@ -127,21 +128,31 @@
   }
   .particle { position: absolute; z-index: 35; pointer-events: none; will-change: transform, opacity; }
 
-  /* 주먹 펀치 */
+  /* 무기 타격 연출 */
   #bossWrap { cursor: pointer; }
-  .fist {
-    position: absolute; z-index: 38; pointer-events: none;
-    font-size: 52px; line-height: 1;
-    transform: translate(-50%, -50%);
-    animation: fistIn .32s cubic-bezier(.2, 1.8, .4, 1) forwards;
-    filter: drop-shadow(0 4px 8px rgba(0,0,0,.45));
+  #paperEmoji {
+    display: none; width: 100%; height: 100%;
+    align-items: center; justify-content: center;
+    font-size: 56px; line-height: 1;
   }
-  @keyframes fistIn {
-    0%   { transform: translate(30%, 120%) scale(2.3) rotate(38deg); opacity: 0; }
-    30%  { transform: translate(-50%, -50%) scale(1) rotate(-12deg); opacity: 1; }
-    65%  { transform: translate(-50%, -50%) scale(.9) rotate(-6deg); opacity: 1; }
-    100% { transform: translate(-42%, -38%) scale(.88) rotate(0deg); opacity: 0; }
+  /* 볼펜: 얼굴에 꽂혀서 부들부들 */
+  .stuck-pen { position: absolute; z-index: 36; font-size: 36px; pointer-events: none; animation: stuckWobble .85s forwards; }
+  @keyframes stuckWobble {
+    0%   { transform: translate(-30%, -85%) rotate(56deg); opacity: 1; }
+    16%  { transform: translate(-30%, -85%) rotate(36deg); }
+    34%  { transform: translate(-30%, -85%) rotate(48deg); }
+    52%  { transform: translate(-30%, -85%) rotate(41deg); }
+    75%  { transform: translate(-30%, -85%) rotate(44deg); opacity: 1; }
+    100% { transform: translate(-30%, -60%) rotate(44deg); opacity: 0; }
   }
+  /* 권총: 탄환 트레이서 */
+  .tracer {
+    position: absolute; height: 3px; border-radius: 2px;
+    background: linear-gradient(90deg, rgba(255,216,61,.05), #ffd83d);
+    transform-origin: 0 50%; z-index: 34; pointer-events: none;
+    animation: tracerFade .16s forwards;
+  }
+  @keyframes tracerFade { to { opacity: 0; } }
 
   /* 화면 흔들림/플래시 */
   .shake-s { animation: shakeS .25s; }
@@ -398,7 +409,8 @@
     <div id="launchZone"></div>
 
     <div id="paper">
-      <svg viewBox="0 0 74 96" xmlns="http://www.w3.org/2000/svg">
+      <div id="paperEmoji"></div>
+      <svg id="paperSvg" viewBox="0 0 74 96" xmlns="http://www.w3.org/2000/svg">
         <rect x="3" y="3" width="68" height="90" rx="5" fill="#fdfdf5" stroke="#d5d2c0" stroke-width="2"/>
         <text x="37" y="30" text-anchor="middle" font-size="16" font-weight="900" fill="#c0392b">사직서</text>
         <g stroke="#b8b5a4" stroke-width="2.5" stroke-linecap="round">
@@ -411,7 +423,7 @@
       </svg>
     </div>
 
-    <div id="throwHint">사직서를 던지거나, 부장님을 눌러 때리세요! 👊<br>세게 던질수록 데미지 UP</div>
+    <div id="throwHint">드래그로 던지거나 부장님을 터치! 장착한 무기가 날아갑니다 🎯<br>세게 던질수록 데미지 UP</div>
     <div id="flash"></div>
 
     <button id="shopBtn">🛒 <span id="ciderAmt">0</span>🥤</button>
@@ -604,6 +616,22 @@ const SFX = (() => {
       o.connect(g).connect(c.destination);
       o.start(t); o.stop(t + 0.18);
     },
+    // 탕! 총성
+    gunshot() {
+      const c = ac(), t = c.currentTime;
+      const n = noise(c), f = c.createBiquadFilter(), g = c.createGain();
+      f.type = 'highpass'; f.frequency.value = 1100;
+      env(c, g, t, 0.002, 0.75, 0.1);
+      n.connect(f).connect(g).connect(c.destination);
+      n.start(t); n.stop(t + 0.13);
+      const o = c.createOscillator(), og = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(230, t);
+      o.frequency.exponentialRampToValueAtTime(55, t + 0.09);
+      env(c, og, t, 0.002, 0.55, 0.11);
+      o.connect(og).connect(c.destination);
+      o.start(t); o.stop(t + 0.13);
+    },
     // 구매 짤랑~
     buy() {
       const c = ac(), t = c.currentTime;
@@ -735,14 +763,15 @@ const Throw = (() => {
   $('#bestCombo').textContent = fmt(bestCombo);
 
   /* ── 재화(사이다) & 무기 상점 ── */
+  // flight: throw(포물선 투척) / dart(직선, 꽂힘) / drop(하늘에서 내리찍기) / shot(즉발 사격)
   const WEAPONS = [
-    { id: 'fist',     emoji: '👊',  name: '맨주먹',        desc: '월급쟁이의 기본기',                    dmg: [7, 11],   price: 0 },
-    { id: 'pen',      emoji: '🖊️', name: '결재 볼펜',      desc: '반려당한 서류의 아픔을 그대로 돌려준다', dmg: [11, 16],  price: 150 },
-    { id: 'keyboard', emoji: '⌨️', name: '기계식 키보드',  desc: '청축 타건음과 함께 터지는 손맛',        dmg: [15, 22],  price: 400 },
-    { id: 'bat',      emoji: '🏏',  name: '야근 몽둥이',    desc: '야근 근절 특별 대책위원회 공식 지급품',  dmg: [20, 28],  price: 900 },
-    { id: 'chair',    emoji: '🪑',  name: '사무용 의자',    desc: '회전의자 풀스윙, 모든 회사원의 로망',    dmg: [26, 35],  price: 1600 },
-    { id: 'gun',      emoji: '🔫',  name: '고무줄 권총',    desc: '탕비실의 전설적인 저격수',              dmg: [33, 44],  price: 2800 },
-    { id: 'brief',    emoji: '💼',  name: '서류가방 풀스윙', desc: '인사팀도 못 막는 직장인 최종병기',      dmg: [42, 55],  price: 4500 },
+    { id: 'fist',     emoji: '📄',  name: '사직서',         desc: '월급쟁이의 기본기, 정성껏 접어 던진다',   dmg: [7, 11],   price: 0,    flight: 'throw', spin: 1,   size: 0,  hitText: '착!',   critText: '사직서 크리티컬!!' },
+    { id: 'pen',      emoji: '🖊️', name: '결재 볼펜',      desc: '다트처럼 날아가 얼굴에 그대로 꽂힌다',    dmg: [11, 16],  price: 150,  flight: 'dart',  spin: 0,   size: 46, hitText: '콕!',   critText: '정수리 관통!!' },
+    { id: 'keyboard', emoji: '⌨️', name: '기계식 키보드',  desc: '하늘에서 청축 풀타건으로 내리찍는다',     dmg: [15, 22],  price: 400,  flight: 'drop',  spin: 0,   size: 58, hitText: '쾅!',   critText: '풀타건 스매시!!' },
+    { id: 'bat',      emoji: '🏏',  name: '야근 몽둥이',    desc: '빙글빙글 회전하며 날아가는 야근 근절봉',  dmg: [20, 28],  price: 900,  flight: 'throw', spin: 2.2, size: 56, hitText: '빠각!', critText: '홈런!!' },
+    { id: 'chair',    emoji: '🪑',  name: '사무용 의자',    desc: '회전의자 풀스윙, 모든 회사원의 로망',     dmg: [26, 35],  price: 1600, flight: 'throw', spin: 1.6, size: 64, hitText: '콰당!', critText: '체어샷!!' },
+    { id: 'gun',      emoji: '🔫',  name: '고무줄 권총',    desc: '즉발 사격! 탕비실의 전설적인 저격수',     dmg: [33, 44],  price: 2800, flight: 'shot',  spin: 0,   size: 52, hitText: '탕!',   critText: '헤드샷!!' },
+    { id: 'brief',    emoji: '💼',  name: '서류가방 풀스윙', desc: '인사팀도 못 막는 직장인 최종병기',        dmg: [42, 55],  price: 4500, flight: 'throw', spin: 2.6, size: 60, hitText: '퍼엉!', critText: '월급날 풀스윙!!' },
   ];
   let cider = +(localStorage.getItem('cider') || 0);
   let owned = JSON.parse(localStorage.getItem('weapons') || '["fist"]');
@@ -805,6 +834,8 @@ const Throw = (() => {
   let samples = [], flightStart = 0;
   const GRAV = 0.55;
   const MAX_SPEED = 65, FLIGHT_TIMEOUT = 3000;
+  let projGrav = GRAV;                    // 발사 방식별 중력 (다트/낙하/투척)
+  let throwMode = 'drag', autoCrit = false; // 터치 자동 투척 여부
 
   function layout() {
     canvas.width = screen.clientWidth;
@@ -930,8 +961,10 @@ const Throw = (() => {
     if (speed < 6) { resetPaper(); return; } // 너무 약하면 제자리
     if (speed > MAX_SPEED) { vx *= MAX_SPEED / speed; vy *= MAX_SPEED / speed; speed = MAX_SPEED; }
     flying = true;
+    throwMode = 'drag';
+    projGrav = GRAV;
     flightStart = performance.now();
-    vrot = vx * 1.2 + rand(-6, 6);
+    vrot = (vx * 1.2 + rand(-6, 6)) * (weapon().spin || 1);
     SFX.whoosh(speed / 30);
     fly();
   }
@@ -961,7 +994,7 @@ const Throw = (() => {
 
   function fly() {
     if (!flying) return;
-    vy += GRAV;
+    vy += projGrav;
     rot += vrot;
 
     // 서브스텝 스윕 충돌: 빠른 사직서가 얼굴을 통과(터널링)하지 못하게 이동을 잘게 쪼개 검사
@@ -1029,38 +1062,51 @@ const Throw = (() => {
 
   function onHit(speed, hx, hy) {
     flying = false;
-    // 파워 티어: speed 기준
-    const isCrit = speed > 46 || (combo >= 4 && speed > 34);
-    const tier = isCrit ? 2 : speed > 26 ? 1 : 0;
-    const dmg = tier === 2 ? rand(22, 30) : tier === 1 ? rand(12, 17) : rand(5, 8);
+    const w = weapon();
+    const wIdx = WEAPONS.indexOf(w);
+    // 티어/데미지: 드래그는 던진 속도 기준, 터치 자동 투척은 무기 기본 데미지
+    let tier, dmg;
+    const base = rand(w.dmg[0], w.dmg[1]);
+    if (throwMode === 'auto') {
+      tier = autoCrit ? 2 : 1;
+      dmg = base * (autoCrit ? 1.9 : 1);
+    } else {
+      const isCrit = speed > 46 || (combo >= 4 && speed > 34);
+      tier = isCrit ? 2 : speed > 26 ? 1 : 0;
+      dmg = base * (tier === 2 ? 2.2 : tier === 1 ? 1.2 : 0.6);
+    }
+    throwMode = 'drag';
 
-    // 연출
+    // 무기별 임팩트 디테일
+    if (w.id === 'pen') stickPen(hx, hy);
+    const heavy = w.id === 'keyboard' || w.id === 'chair' || w.id === 'brief';
+
     if (tier === 2) {
       SFX.crit(); SFX.grunt(0.8);
       shake(screen, 'shake-l');
       flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
-      fxText(screen, hx, hy - 30, '크리티컬!!', 34, '#ff4757');
+      fxText(screen, hx, hy - 30, w.critText, 32, '#ff4757');
       fxText(screen, hx + rand(-40, 40), hy - 80, '-' + Math.round(dmg), 26, '#ffd83d');
-      burstParticles(screen, hx, hy, ['💥', '⭐', '💢', '😵'], 14, 13);
+      burstParticles(screen, hx, hy, ['💥', '⭐', '💢', w.emoji], 14, 13);
       setFace('dizzy');
       say(pick(HIT_CRIT), 1500);
       vibrate([60, 40, 80]);
       addCider(3, hx, hy);
     } else if (tier === 1) {
-      SFX.hit(1.2); SFX.grunt(1);
-      shake(screen, 'shake-m');
-      fxText(screen, hx, hy - 26, pick(['퍽!', '빡!', '착!']), 28, '#ffd83d');
+      SFX.hit(1.1 + wIdx * 0.15); SFX.grunt(1);
+      shake(screen, heavy ? 'shake-l' : 'shake-m');
+      fxText(screen, hx, hy - 26, w.hitText, 28, '#ffd83d');
       fxText(screen, hx + rand(-30, 30), hy - 66, '-' + Math.round(dmg), 20, '#fff');
-      burstParticles(screen, hx, hy, ['💢', '💦', '📄'], 8, 9);
+      burstParticles(screen, hx, hy, ['💢', '💦', w.emoji], 8, 9);
       setFace('hit');
-      say(pick(HIT_MID), 1300);
+      if (Math.random() < 0.6) say(pick(HIT_MID), 1300);
       vibrate(50);
       addCider(2, hx, hy);
     } else {
       SFX.hit(0.6);
       shake(screen, 'shake-s');
       fxText(screen, hx, hy - 22, '톡', 20, '#cfd3ec');
-      burstParticles(screen, hx, hy, ['💦', '📄'], 4, 6);
+      burstParticles(screen, hx, hy, ['💦', w.emoji], 4, 6);
       setFace('hit');
       say(pick(HIT_WEAK), 1200);
       vibrate(25);
@@ -1071,64 +1117,102 @@ const Throw = (() => {
     resetPaper();
   }
 
-  /* ── 주먹 펀치: 부장님을 클릭/탭해서 직접 타격 ── */
-  let lastPunch = 0, punchChain = 0, punchChainTimer = null;
+  // 볼펜이 얼굴에 꽂히는 연출
+  function stickPen(x, y) {
+    const el = document.createElement('div');
+    el.className = 'stuck-pen';
+    el.textContent = '🖊️';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    screen.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+
+  // 권총 탄환 트레이서
+  function tracer(x1, y1, x2, y2) {
+    const el = document.createElement('div');
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+    el.className = 'tracer';
+    el.style.cssText = `left:${x1}px; top:${y1}px; width:${len}px; transform: rotate(${ang}deg);`;
+    screen.appendChild(el);
+    setTimeout(() => el.remove(), 200);
+  }
+
+  /* ── 터치 자동 투척: 부장님을 터치하면 장착 무기가 그 지점으로 날아감 ── */
+  let lastStrike = 0, strikeChain = 0, strikeChainTimer = null;
 
   bossWrap.addEventListener('pointerdown', e => {
     if (dragging || mental <= 0) return;
     const now = performance.now();
-    if (now - lastPunch < 120) return; // 이벤트 스팸 방지 (연타는 허용)
-    lastPunch = now;
+    if (now - lastStrike < 130) return; // 이벤트 스팸 방지 (연타는 허용)
+    lastStrike = now;
     e.preventDefault();
     $('#throwHint').style.display = 'none';
     const p = pointerPos(e);
-    punch(p.x, p.y);
+    weaponStrike(p.x, p.y);
   });
 
-  function punch(x, y) {
-    punchChain++;
-    clearTimeout(punchChainTimer);
-    punchChainTimer = setTimeout(() => punchChain = 0, 900);
-    const isCrit = (punchChain >= 5 && punchChain % 5 === 0) || Math.random() < 0.12;
+  function weaponStrike(tx, ty) {
     const w = weapon();
-    const wIdx = WEAPONS.indexOf(w);
+    strikeChain++;
+    clearTimeout(strikeChainTimer);
+    strikeChainTimer = setTimeout(() => strikeChain = 0, 900);
+    autoCrit = (strikeChain >= 5 && strikeChain % 5 === 0) || Math.random() < 0.12;
 
-    const fist = document.createElement('div');
-    fist.className = 'fist';
-    fist.textContent = w.id === 'fist' ? pick(['👊', '🤛', '🤜']) : w.emoji;
-    fist.style.left = x + 'px';
-    fist.style.top = y + 'px';
-    screen.appendChild(fist);
-    setTimeout(() => fist.remove(), 380);
+    // 어디를 터치해도 얼굴을 향해 날아가도록 조준점을 얼굴 판정 영역 안으로 클램프
+    const fr = bossRect();
+    tx = clamp(tx, fr.x + 24, fr.x + fr.w - 24);
+    ty = clamp(ty, fr.y + 30, fr.y + fr.h - 24);
 
-    SFX.whoosh(0.9 + wIdx * 0.1);
-    setTimeout(() => { // 무기가 꽂히는 타이밍(애니메이션 30% 지점)에 타격
-      if (mental <= 0) return;
-      const base = rand(w.dmg[0], w.dmg[1]);
-      if (isCrit) {
-        SFX.crit(); SFX.grunt(0.75);
-        shake(screen, 'shake-l');
-        flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
-        fxText(screen, x, y - 34, w.id === 'fist' ? pick(['카운터 펀치!!', '어퍼컷!!', '핵주먹!!']) : `${w.name} 크리티컬!!`, 32, '#ff4757');
-        burstParticles(screen, x, y, ['💥', '⭐', '💢', w.emoji], 12, 12);
-        setFace('dizzy');
-        say(pick(HIT_CRIT), 1400);
-        vibrate([50, 30, 70]);
-        addCider(3, x, y);
-        registerHit(base * 1.9);
-      } else {
-        SFX.hit(1.2 + wIdx * 0.15);
-        if (Math.random() < 0.5) SFX.grunt(1.05);
-        shake(screen, 'shake-m');
-        fxText(screen, x + rand(-8, 8), y - 26, pick(['퍽!', '빡!', '억!']), 26, '#ffd83d');
-        burstParticles(screen, x, y, ['💢', '💥', '💦'], 6, 9);
-        setFace('hit');
-        if (Math.random() < 0.35) say(pick(HIT_MID), 1100);
-        vibrate(35);
-        addCider(1, x, y);
-        registerHit(base);
-      }
-    }, 100);
+    // 권총: 즉발 — 트레이서와 총성, 투사체는 손에 그대로
+    if (w.flight === 'shot') {
+      SFX.gunshot();
+      tracer(homeX + 37, homeY + 30, tx, ty);
+      fxText(screen, homeX + 37, homeY - 6, '💥', 22, '#ffd83d'); // 머즐 플래시
+      throwMode = 'auto';
+      onHit(50, tx, ty);
+      return;
+    }
+
+    if (flying) return; // 투사체는 한 번에 하나
+    flying = true;
+    throwMode = 'auto';
+    flightStart = performance.now();
+
+    if (w.flight === 'drop') {
+      // 키보드: 하늘에서 목표 지점으로 내리찍기
+      px = tx - 37; py = -110;
+      vx = 0; vy = 9; projGrav = 1.6;
+      rot = 0; vrot = rand(-2, 2);
+    } else if (w.flight === 'dart') {
+      // 볼펜: 직선 다트, 펜촉이 목표를 향함
+      px = homeX; py = homeY;
+      const dx = tx - (px + 37), dy = ty - (py + 48), d = Math.hypot(dx, dy) || 1;
+      vx = dx / d * 55; vy = dy / d * 55; projGrav = 0.05;
+      rot = Math.atan2(dy, dx) * 180 / Math.PI + 45; vrot = 0;
+    } else {
+      // 투척(사직서/몽둥이/의자/가방): 손에서 목표로 빠른 포물선
+      px = homeX; py = homeY;
+      const dx = tx - (px + 37), dy = ty - (py + 48), d = Math.hypot(dx, dy) || 1;
+      const s = 40;
+      vx = dx / d * s; vy = dy / d * s - 3; projGrav = 0.3;
+      vrot = (w.spin || 1) * 14 * (Math.random() < 0.5 ? -1 : 1);
+    }
+    SFX.whoosh(1 + WEAPONS.indexOf(w) * 0.08);
+    render();
+    fly();
+  }
+
+  // 장착 무기에 따라 투사체 비주얼 교체 (사직서 ↔ 무기 이모지)
+  function updateProjectile() {
+    const w = weapon();
+    const isPaper = w.id === 'fist';
+    $('#paperSvg').style.display = isPaper ? '' : 'none';
+    const em = $('#paperEmoji');
+    em.style.display = isPaper ? 'none' : 'flex';
+    em.textContent = w.emoji;
+    em.style.fontSize = (w.size || 56) + 'px';
   }
 
   function updateHud() {
@@ -1197,6 +1281,7 @@ const Throw = (() => {
         if (isOwned) {
           equipId = w.id;
           saveShop();
+          updateProjectile();
           SFX.combo(4);
           renderShop();
         } else if (cider >= w.price) {
@@ -1204,6 +1289,7 @@ const Throw = (() => {
           owned.push(w.id);
           equipId = w.id;
           saveShop();
+          updateProjectile();
           updateCider();
           SFX.buy();
           vibrate(40);
@@ -1234,6 +1320,7 @@ const Throw = (() => {
   setFace('idle');
   updateMental();
   updateCider();
+  updateProjectile();
   if (bossLevel > 1) $('#mentalLabel').textContent = `부장님 멘탈 (${bossLevel}대째)`;
 
   return { layout };
@@ -1390,9 +1477,10 @@ const Boom = (() => {
     }, 1400);
   }
 
-  renderStats();
-  fetchStats();
-  setInterval(fetchStats, 20000); // 실시간 집계 주기 갱신
+  // 회사 폭파 게임은 추후 별도 개발 예정 — 화면이 숨겨져 있는 동안 집계 폴링도 중단
+  // renderStats();
+  // fetchStats();
+  // setInterval(fetchStats, 20000);
 
   return {};
 })();
