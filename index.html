@@ -1472,15 +1472,19 @@ const Throw = (() => {
     em.style.fontSize = (w.size || 56) + 'px';
   }
 
-  /* ── 전국 타격 집계: 연타 게임이라 10대를 모아 카운터 +1 (API 스팸 방지) ── */
+  /* ── 전국 타격 집계 ──
+     서버(counterapi.dev)에는 연타 게임 특성상 10대를 모아 카운터 +1 (API 스팸 방지).
+     화면 표시는 서버 커밋분(10단위) + 내 미커밋 타격(0~9)을 합쳐 매 타격 1씩 오른다. */
   const HIT_BATCH = 10;
   let pendingHits = +(localStorage.getItem('pendingHits') || 0);
   let natHitUnits = null, natHitters = null;
+  const natHitTotal = () => (natHitUnits || 0) * HIT_BATCH + pendingHits;
 
   function reportHit() {
     pendingHits++;
     if (pendingHits >= HIT_BATCH) {
       pendingHits -= HIT_BATCH;
+      if (natHitUnits !== null) natHitUnits++; // 서버 응답 전 낙관적 반영 → 표시 숫자가 잠깐 줄지 않게
       apiCount('hits-' + kstDay(), true).then(c => { natHitUnits = c; updateNatHud(); }).catch(() => {});
     }
     localStorage.setItem('pendingHits', pendingHits);
@@ -1490,6 +1494,7 @@ const Throw = (() => {
       localStorage.setItem('hitJoinedDay', d);
       apiCount('hitters-' + d, true).then(c => { natHitters = c; updateNatHud(); }).catch(() => {});
     }
+    updateNatHud(); // 매 타격마다 표시 숫자를 1씩 올린다
   }
 
   async function fetchNatStats() {
@@ -1502,14 +1507,14 @@ const Throw = (() => {
   }
 
   function updateNatHud() {
-    natHitsEl.textContent = natHitUnits === null ? '…' : fmt(natHitUnits * HIT_BATCH);
+    natHitsEl.textContent = natHitUnits === null ? '…' : fmt(natHitTotal());
     if ($('#natOverlay').classList.contains('show')) renderNatPanel();
   }
 
   function renderNatPanel() {
     $('#natLineT').innerHTML = natHitUnits === null
       ? '전국 집계 서버 연결 중… 📡'
-      : `오늘 전국 직장인 <b>${fmt(natHitters)}</b>명이<br>상사를 <b>${fmt(natHitUnits * HIT_BATCH)}</b>번 팼습니다`;
+      : `오늘 전국 직장인 <b>${fmt(natHitters)}</b>명이<br>상사를 <b>${fmt(natHitTotal())}</b>번 팼습니다`;
     $('#natMine').innerHTML = `내 누적 타격 <b>${fmt(hits)}회</b> · 최고 콤보 <b>${fmt(bestCombo)}</b>`;
   }
 
