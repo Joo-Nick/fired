@@ -3,8 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>상사 패기 🔥</title>
-<meta name="description" content="상사 패기 — 부장님에게 사직서와 온갖 무기를 날리는 직장인 스트레스 해소 게임">
+<title>상사 패기 🔥 | 부장님에게 사직서 날리는 직장인 스트레스 해소 게임</title>
+<meta name="description" content="부장님에게 사직서와 볼펜·키보드·의자를 던져 멘탈을 KO시키는 직장인 스트레스 해소 게임 '상사 패기'. 설치 없이 무료로 즐기는 웹·모바일 방치형 게임.">
+<meta name="keywords" content="상사 패기, 상사 패러 가기, 직장인 게임, 스트레스 해소 게임, 사직서 던지기, 부장님 게임, 퇴사 게임, 무료 웹게임, 방치형 게임, 클리커 게임">
+<meta name="author" content="상사 패기">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#14161f">
+<link rel="canonical" href="https://sangsahit.kro.kr/">
+
+<!-- Open Graph: 카카오톡·페이스북 등에서 공유될 때 보이는 미리보기 -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="상사 패기">
+<meta property="og:title" content="상사 패기 🔥 | 직장인 스트레스 해소 게임">
+<meta property="og:description" content="부장님에게 사직서와 온갖 무기를 날려 멘탈을 KO! 설치 없이 무료로 즐기는 직장인 스트레스 해소 게임.">
+<meta property="og:url" content="https://sangsahit.kro.kr/">
+<meta property="og:image" content="https://sangsahit.kro.kr/image/og-image.png">
+<meta property="og:image:secure_url" content="https://sangsahit.kro.kr/image/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="사직서와 무기에 얻어맞아 멍든 부장님">
+<meta property="og:locale" content="ko_KR">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="상사 패기 🔥 | 직장인 스트레스 해소 게임">
+<meta name="twitter:description" content="부장님에게 사직서와 온갖 무기를 날려 멘탈을 KO! 설치 없이 무료 플레이.">
+<meta name="twitter:image" content="https://sangsahit.kro.kr/image/og-image.png">
+<meta name="twitter:image:alt" content="사직서와 무기에 얻어맞아 멍든 부장님">
+
+<!-- 파비콘 & 홈 화면 아이콘 -->
+<link rel="icon" type="image/png" sizes="32x32" href="/image/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/image/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/image/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+
+<!-- 구조화 데이터(JSON-LD): 검색엔진에 게임 정보를 명시적으로 제공 -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "상사 패기",
+  "alternateName": "상사 패러 가기",
+  "url": "https://sangsahit.kro.kr/",
+  "image": "https://sangsahit.kro.kr/image/og-image.png",
+  "description": "부장님에게 사직서와 볼펜·키보드·의자를 던져 멘탈을 KO시키는 직장인 스트레스 해소 게임. 설치 없이 무료로 즐기는 웹·모바일 방치형 게임.",
+  "inLanguage": "ko",
+  "genre": ["캐주얼", "클리커", "스트레스 해소"],
+  "gamePlatform": ["Web browser", "Mobile"],
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "KRW"
+  }
+}
+</script>
 <!-- Vercel Web Analytics (무료 페이지뷰). 대시보드에서 Analytics 켜면 자동 집계 -->
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script>
 <script defer src="/_vercel/insights/script.js"></script>
@@ -827,6 +882,19 @@ const Throw = (() => {
   const cx2d = canvas.getContext('2d');
   const flash = $('#flash');
 
+  // 매 타격/프레임마다 querySelector 하지 않도록 자주 쓰는 요소는 한 번만 캐시
+  const faceEls = {
+    eyesOpen: $('#eyesOpen'), eyesHit: $('#eyesHit'), eyesDizzy: $('#eyesDizzy'),
+    sweat: $('#sweat'), stars: $('#stars'), blush: $('#blush'),
+    mouth: $('#mouth'), browL: $('#browL'), browR: $('#browR'),
+  };
+  const hitCountEl = $('#hitCount');
+  const mentalFillEl = $('#mentalFill');
+  const mentalNumEl = $('#mentalNum');
+  const ciderAmtEl = $('#ciderAmt');
+  const shopCiderEl = $('#shopCider');
+  const throwHintEl = $('#throwHint');
+
   // 부장님 세대(레벨)와 체력은 저장/복원 — 세대가 올라갈수록 최대 멘탈 +30
   let bossLevel = +(localStorage.getItem('bossLevel') || 1);
   let maxMental = 100 + (bossLevel - 1) * 30;
@@ -836,7 +904,7 @@ const Throw = (() => {
   let combo = 0, bestCombo = +(localStorage.getItem('bestCombo') || 0);
   let comboTimer = null;
 
-  $('#hitCount').textContent = fmt(hits);
+  hitCountEl.textContent = fmt(hits);
 
   /* ── 재화(사이다) & 무기 상점 ── */
   // flight: throw(포물선 투척) / dart(직선, 꽂힘) / drop(하늘에서 내리찍기) / shot(즉발 사격)
@@ -861,8 +929,8 @@ const Throw = (() => {
   }
 
   function updateCider() {
-    $('#ciderAmt').textContent = fmt(cider);
-    $('#shopCider').textContent = fmt(cider) + ' 🥤';
+    ciderAmtEl.textContent = fmt(cider);
+    shopCiderEl.textContent = fmt(cider) + ' 🥤';
   }
 
   function addCider(n) {
@@ -913,6 +981,7 @@ const Throw = (() => {
 
   // 물리 상태
   let homeX = 0, homeY = 0;
+  let screenRect = screen.getBoundingClientRect(); // 스크롤 없는 고정 화면 → layout()에서만 갱신
   let dragging = false, flying = false;
   let px = 0, py = 0, vx = 0, vy = 0, rot = 0, vrot = 0;
   let samples = [], flightStart = 0;
@@ -928,6 +997,7 @@ const Throw = (() => {
     canvas.height = screen.clientHeight;
     homeX = screen.clientWidth / 2 - 37;
     homeY = screen.clientHeight * 0.72;
+    screenRect = screen.getBoundingClientRect();
     if (!dragging && !flying) resetPaper();
   }
 
@@ -953,26 +1023,24 @@ const Throw = (() => {
   }
 
   function setFace(state) {
-    const show = (id, on) => $(id).style.display = on ? '' : 'none';
-    show('#eyesOpen', state === 'idle');
-    show('#eyesHit', state === 'hit');
-    show('#eyesDizzy', state === 'dizzy' || state === 'ko');
-    show('#sweat', state === 'hit' || state === 'dizzy');
-    show('#stars', state === 'dizzy' || state === 'ko');
-    show('#blush', state !== 'idle');
-    const mouth = $('#mouth');
-    if (state === 'idle') mouth.setAttribute('d', 'M78 156 Q100 146 122 156');           // 능글 미소
-    else if (state === 'hit') mouth.setAttribute('d', 'M82 160 Q100 172 118 160');        // 울상
-    else mouth.setAttribute('d', 'M88 158 a12 9 0 1 0 24 0 a12 9 0 1 0 -24 0');           // 벌린 입
+    faceEls.eyesOpen.style.display  = state === 'idle' ? '' : 'none';
+    faceEls.eyesHit.style.display   = state === 'hit' ? '' : 'none';
+    faceEls.eyesDizzy.style.display = (state === 'dizzy' || state === 'ko') ? '' : 'none';
+    faceEls.sweat.style.display     = (state === 'hit' || state === 'dizzy') ? '' : 'none';
+    faceEls.stars.style.display     = (state === 'dizzy' || state === 'ko') ? '' : 'none';
+    faceEls.blush.style.display     = state !== 'idle' ? '' : 'none';
+    if (state === 'idle') faceEls.mouth.setAttribute('d', 'M78 156 Q100 146 122 156');    // 능글 미소
+    else if (state === 'hit') faceEls.mouth.setAttribute('d', 'M82 160 Q100 172 118 160'); // 울상
+    else faceEls.mouth.setAttribute('d', 'M88 158 a12 9 0 1 0 24 0 a12 9 0 1 0 -24 0');    // 벌린 입
     // 눈썹
-    $('#browL').setAttribute('d', state === 'idle' ? 'M55 92 L85 98' : 'M55 100 L85 90');
-    $('#browR').setAttribute('d', state === 'idle' ? 'M145 92 L115 98' : 'M145 100 L115 90');
+    faceEls.browL.setAttribute('d', state === 'idle' ? 'M55 92 L85 98' : 'M55 100 L85 90');
+    faceEls.browR.setAttribute('d', state === 'idle' ? 'M145 92 L115 98' : 'M145 100 L115 90');
   }
 
   function bossRect() {
     // 얼굴(머리) 영역 판정 — 어느 방향에서 날아와도 맞도록 여유 있게
     const r = bossWrap.getBoundingClientRect();
-    const sr = screen.getBoundingClientRect();
+    const sr = screenRect;
     return {
       x: r.left - sr.left + r.width * 0.06,
       y: r.top - sr.top - r.height * 0.04,
@@ -981,12 +1049,22 @@ const Throw = (() => {
     };
   }
 
-  // 부장님 아이들 애니메이션 (도발)
-  setInterval(() => {
-    if (!flying && !dragging && mental > 0 && !bubble.classList.contains('show')) {
-      if (Math.random() < 0.5) say(pick(TAUNTS), 2200);
-    }
-  }, 3500);
+  // 부장님 도발: 한 문구가 사라지면 곧바로 다음 문구가 이어지도록 자가 예약 루프
+  const TAUNT_MS = 2000;      // 문구 노출 시간
+  let tauntTimer = null;
+  function scheduleTaunt(delay) {
+    clearTimeout(tauntTimer);
+    tauntTimer = setTimeout(() => {
+      // 던지는 중·드래그 중·KO·이미 다른 말풍선(타격 리액션)이 떠 있으면 잠깐 뒤 재시도
+      if (!flying && !dragging && mental > 0 && !bubble.classList.contains('show')) {
+        say(pick(TAUNTS), TAUNT_MS);
+        scheduleTaunt(TAUNT_MS + rand(250, 600)); // 문구가 사라진 직후 짧은 텀을 두고 다음 문구
+      } else {
+        scheduleTaunt(500);
+      }
+    }, delay);
+  }
+  scheduleTaunt(700);
 
   // 둥실둥실
   let bobT = 0;
@@ -998,8 +1076,7 @@ const Throw = (() => {
 
   /* ── 드래그 & 던지기 ── */
   function pointerPos(e) {
-    const sr = screen.getBoundingClientRect();
-    return { x: e.clientX - sr.left, y: e.clientY - sr.top };
+    return { x: e.clientX - screenRect.left, y: e.clientY - screenRect.top };
   }
 
   function startDrag(e) {
@@ -1008,7 +1085,7 @@ const Throw = (() => {
     dragging = true;
     samples = [];
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
-    $('#throwHint').style.display = 'none';
+    throwHintEl.style.display = 'none';
     // 잡는 순간 사직서가 손가락 위치로 이동 (하단 어디서든 바로 스와이프 가능)
     const p = pointerPos(e);
     px = p.x - 37; py = p.y - 48;
@@ -1239,7 +1316,7 @@ const Throw = (() => {
     if (now - lastStrike < 130) return; // 이벤트 스팸 방지 (연타는 허용)
     lastStrike = now;
     e.preventDefault();
-    $('#throwHint').style.display = 'none';
+    throwHintEl.style.display = 'none';
     const p = pointerPos(e);
     weaponStrike(p.x, p.y);
   });
@@ -1330,12 +1407,12 @@ const Throw = (() => {
   }
 
   function updateHud() {
-    $('#hitCount').textContent = fmt(hits);
+    hitCountEl.textContent = fmt(hits);
   }
 
   function updateMental() {
-    $('#mentalFill').style.width = (mental / maxMental * 100) + '%';
-    $('#mentalNum').textContent = Math.ceil(mental) + ' / ' + maxMental;
+    mentalFillEl.style.width = (mental / maxMental * 100) + '%';
+    mentalNumEl.textContent = Math.ceil(mental) + ' / ' + maxMental;
   }
 
   function ko() {
