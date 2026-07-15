@@ -8,6 +8,15 @@
 <!-- Vercel Web Analytics (무료 페이지뷰). 대시보드에서 Analytics 켜면 자동 집계 -->
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script>
 <script defer src="/_vercel/insights/script.js"></script>
+<!-- Amplitude Analytics + Session Replay. 번들러가 없는 정적 사이트라 문서의 @amplitude/unified
+     SDK를 ESM CDN으로 로드한다. 전부 클라이언트 측에서만 실행되고 initAll은 로드 시 1회만 호출. -->
+<script type="module">
+  import * as amplitude from 'https://esm.sh/@amplitude/unified@1';
+  amplitude.initAll('e7b4c9acd85ecd22aafe178a1e8bb701', {"analytics":{"autocapture":true},"sessionReplay":{"sampleRate":1}});
+  window.amplitude = amplitude;
+  // Amplitude 로드 전에 쌓인 이벤트를 순서대로 흘려보낸다
+  if (window.__ampFlush) window.__ampFlush();
+</script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
@@ -541,12 +550,22 @@ const Track = (() => {
     s.onerror = () => { queue.length = 0; };
     document.head.appendChild(s);
   }
+  // Amplitude: 모듈 스크립트가 window.amplitude 를 세팅하기 전에 쌓인 이벤트를 큐잉했다가 flush
+  const ampQueue = [];
+  window.__ampFlush = () => {
+    if (!window.amplitude) return;
+    ampQueue.splice(0).forEach(([n, p]) => { try { window.amplitude.track(n, p); } catch (e) {} });
+  };
+
   return (name, props = {}) => {
     // Mixpanel: 커스텀 이벤트 (준비 전이면 큐잉)
     if (MIXPANEL_TOKEN) {
       if (ready) { try { mixpanel.track(name, props); } catch (e) {} }
       else if (queue.length < 50) queue.push([name, props]);
     }
+    // Amplitude: 커스텀 이벤트 (SDK 로드 전이면 큐잉)
+    if (window.amplitude) { try { window.amplitude.track(name, props); } catch (e) {} }
+    else if (ampQueue.length < 50) ampQueue.push([name, props]);
     // Vercel Web Analytics 커스텀 이벤트(Pro 전용이지만 호출은 무해)
     try { window.va && window.va('event', { name, data: props }); } catch (e) {}
   };
@@ -1372,7 +1391,13 @@ const Throw = (() => {
           owned.push(w.id);
           equipId = w.id;
           saveShop();
-          Track('weapon_purchased', { weapon: w.id, price: w.price, boss_level: bossLevel });
+          Track('weapon_purchased', {
+            weapon: w.id, weapon_name: w.name, price: w.price,
+            rank: WEAPONS.indexOf(w),          // 상점 진행도: 1(볼펜)~6(서류가방)
+            weapons_owned: owned.length,        // 지금까지 보유한 무기 수
+            reached_final: w.id === WEAPONS[WEAPONS.length - 1].id, // 최종 무기 도달 여부
+            boss_level: bossLevel,
+          });
           updateProjectile();
           updateCider();
           SFX.buy();
