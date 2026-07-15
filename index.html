@@ -284,11 +284,25 @@
   #flash.go { animation: flashGo .3s; }
   @keyframes flashGo { 0%{opacity:.7} 100%{opacity:0} }
 
-  /* 상점 버튼 (HUD 박스형) */
-  #shopBtn { pointer-events: auto; cursor: pointer; color: #ffd83d; font-family: inherit; }
-  #shopBtn:active { transform: scale(.94); }
-  #shopBtn .hud-label { color: #ffd83d; }
-  #shopBtn .hud-val { font-size: 17px; }
+  /* 상점 버튼: 명중 카운터와 구분되는 골드 버튼 (은은한 글로우로 시선 유도) */
+  #shopBtn {
+    pointer-events: auto; cursor: pointer; font-family: inherit;
+    background: linear-gradient(145deg, #ffd23d, #ff9f2e);
+    border: none;
+    box-shadow: 0 3px 0 #b5680f, 0 6px 16px rgba(255,180,50,.4);
+    animation: shopGlow 2s infinite;
+  }
+  #shopBtn:active {
+    transform: translateY(2px) scale(.97);
+    box-shadow: 0 1px 0 #b5680f, 0 3px 8px rgba(255,180,50,.3);
+    animation: none;
+  }
+  #shopBtn .hud-label { color: #7a4a08; }
+  #shopBtn .hud-val { font-size: 17px; color: #3a2404; }
+  @keyframes shopGlow {
+    0%, 100% { box-shadow: 0 3px 0 #b5680f, 0 6px 14px rgba(255,180,50,.35); }
+    50%      { box-shadow: 0 3px 0 #b5680f, 0 6px 24px rgba(255,210,70,.75); }
+  }
   #shopOverlay {
     position: absolute; inset: 0; z-index: 70;
     background: rgba(10,10,20,.8); backdrop-filter: blur(3px);
@@ -425,7 +439,7 @@
         <div class="hud-val"><span id="ciderAmt">0</span> 🥤</div>
       </button>
       <div id="mentalWrap">
-        <div id="mentalLabel">부장님 멘탈</div>
+        <div id="mentalLabel">상사 멘탈</div>
         <div id="mentalBar">
           <div id="mentalFill"></div>
           <div id="mentalNum">100 / 100</div>
@@ -899,9 +913,12 @@ const Throw = (() => {
   const shopCiderEl = $('#shopCider');
   const throwHintEl = $('#throwHint');
 
-  // 부장님 세대(레벨)와 체력은 저장/복원 — 세대가 올라갈수록 최대 멘탈 +30
+  // 부장님 세대(레벨)와 체력은 저장/복원
+  // 세대별 최대 멘탈: 초반엔 금방 잡히고 세대가 오를수록 급증,
+  // 최종 무기 연타 기준 한 세대에 30초 정도 걸리는 수준(최대 10,000)에서 수렴
+  const mentalCap = lv => Math.min(10000, Math.round(300 * Math.pow(1.25, lv - 1)));
   let bossLevel = +(localStorage.getItem('bossLevel') || 1);
-  let maxMental = 100 + (bossLevel - 1) * 30;
+  let maxMental = mentalCap(bossLevel);
   const savedMental = parseFloat(localStorage.getItem('mental'));
   let mental = savedMental > 0 ? Math.min(savedMental, maxMental) : maxMental;
   let hits = +(localStorage.getItem('hitCount') || 0);
@@ -1212,7 +1229,8 @@ const Throw = (() => {
     comboTimer = setTimeout(() => { combo = 0; updateHud(); }, 3500);
     updateHud();
 
-    mental = clamp(mental - dmg * (1 + combo * 0.04), 0, maxMental);
+    // 콤보 보너스는 최대 +60%까지만 — 무한 연타로 데미지가 폭주하지 않게 상한
+    mental = clamp(mental - dmg * (1 + Math.min(combo, 20) * 0.03), 0, maxMental);
     localStorage.setItem('mental', mental);
     updateMental();
 
@@ -1264,7 +1282,7 @@ const Throw = (() => {
       setFace('dizzy');
       say(pick(HIT_CRIT), 1500);
       vibrate([60, 40, 80]);
-      addCider(3);
+      addCider(2);
     } else if (tier === 1) {
       SFX.hit(1.1 + wIdx * 0.15); SFX.grunt(1);
       shake(screen, heavy ? 'shake-l' : 'shake-m');
@@ -1273,7 +1291,7 @@ const Throw = (() => {
       setFace('hit');
       if (Math.random() < 0.6) say(pick(HIT_MID), 1300);
       vibrate(50);
-      addCider(2);
+      addCider(1);
     } else {
       SFX.hit(0.6);
       shake(screen, 'shake-s');
@@ -1422,7 +1440,7 @@ const Throw = (() => {
   function ko() {
     SFX.fanfare();
     setFace('ko');
-    const reward = 100 + (bossLevel - 1) * 50; // 위로금: 세대가 높을수록 두둑하게
+    const reward = 50 + (bossLevel - 1) * 20; // 위로금: 세대가 높을수록 두둑하게
     addCider(reward);
     Track('boss_ko', { level: bossLevel, weapon: equipId, total_hits: hits });
     bossWrap.style.transition = 'transform .8s';
@@ -1441,12 +1459,12 @@ const Throw = (() => {
 
   function nextBoss() {
     bossLevel++;
-    maxMental = 100 + (bossLevel - 1) * 30; // 세대가 바뀔수록 멘탈이 단단한 부장님 등장
+    maxMental = mentalCap(bossLevel); // 세대가 바뀔수록 멘탈이 단단한 부장님 등장
     mental = maxMental;
     localStorage.setItem('bossLevel', bossLevel);
     localStorage.setItem('mental', mental);
     updateMental();
-    $('#mentalLabel').textContent = `부장님 멘탈 (${bossLevel}대째)`;
+    $('#mentalLabel').textContent = `상사 멘탈 (${bossLevel}대째)`;
     bossWrap.style.transition = 'transform .4s';
     bossWrap.style.transform = 'translateX(-50%)';
     setFace('idle');
@@ -1526,7 +1544,7 @@ const Throw = (() => {
   updateMental();
   updateCider();
   updateProjectile();
-  if (bossLevel > 1) $('#mentalLabel').textContent = `부장님 멘탈 (${bossLevel}대째)`;
+  if (bossLevel > 1) $('#mentalLabel').textContent = `상사 멘탈 (${bossLevel}대째)`;
 
   return { layout };
 })();
