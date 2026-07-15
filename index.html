@@ -914,9 +914,9 @@ const Throw = (() => {
   const throwHintEl = $('#throwHint');
 
   // 부장님 세대(레벨)와 체력은 저장/복원
-  // 세대별 최대 멘탈: 초반엔 금방 잡히고 세대가 오를수록 급증,
-  // 최종 무기 연타 기준 한 세대에 30초 정도 걸리는 수준(최대 10,000)에서 수렴
-  const mentalCap = lv => Math.min(10000, Math.round(300 * Math.pow(1.25, lv - 1)));
+  // 세대별 최대 멘탈: 초반(1~5세대)은 1~3초 만에 터지는 속전속결로 도파민을 챙기고,
+  // 세대가 오를수록 가파르게 올라 최종 무기 연타 기준 30초 수준(최대 10,000)에서 수렴
+  const mentalCap = lv => Math.min(10000, Math.round(60 * Math.pow(1.35, lv - 1)));
   let bossLevel = +(localStorage.getItem('bossLevel') || 1);
   let maxMental = mentalCap(bossLevel);
   const savedMental = parseFloat(localStorage.getItem('mental'));
