@@ -12,7 +12,21 @@
      SDK를 ESM CDN으로 로드한다. 전부 클라이언트 측에서만 실행되고 initAll은 로드 시 1회만 호출. -->
 <script type="module">
   import * as amplitude from 'https://esm.sh/@amplitude/unified@1';
-  amplitude.initAll('e7b4c9acd85ecd22aafe178a1e8bb701', {"analytics":{"autocapture":true},"sessionReplay":{"sampleRate":1}});
+  // 이 게임은 부장님을 계속 탭/클릭해서 때리는 구조라 elementInteractions(클릭 자동수집)를 켜면
+  // 이벤트가 폭발한다. 클릭 자동수집만 끄고 페이지뷰·세션은 유지 + 커스텀 이벤트로 핵심만 추적.
+  amplitude.initAll('e7b4c9acd85ecd22aafe178a1e8bb701', {
+    analytics: {
+      autocapture: {
+        pageViews: true,
+        sessions: true,
+        attribution: true,
+        formInteractions: false,
+        fileDownloads: false,
+        elementInteractions: false
+      }
+    },
+    sessionReplay: { sampleRate: 1 }
+  });
   window.amplitude = amplitude;
   // Amplitude 로드 전에 쌓인 이벤트를 순서대로 흘려보낸다
   if (window.__ampFlush) window.__ampFlush();
