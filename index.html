@@ -365,6 +365,42 @@
   #natMine { font-size: 12.5px; color: #9aa0c0; font-weight: 700; }
   #natMine b { color: #7bffb2; }
 
+  /* 상점 섹션 제목 (자기계발/무기고) */
+  .shop-sec { font-size: 12px; font-weight: 900; color: #9aa0c0; padding: 6px 4px 0; }
+
+  /* 이직(환생) 오버레이: 회장 격파 시 다음 회사 선택 */
+  #jobOverlay {
+    position: absolute; inset: 0; z-index: 75;
+    background: rgba(10,10,20,.85); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  #jobOverlay.show { display: flex; }
+  #jobPanel {
+    width: 100%; max-width: 420px; max-height: 88%;
+    background: #1d2133; border: 1px solid rgba(255,216,61,.4);
+    border-radius: 18px; padding: 16px 14px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .job-head { font-size: 18px; font-weight: 900; text-align: center; color: #ffd83d; }
+  .job-sub { font-size: 12px; color: #9aa0c0; text-align: center; font-weight: 700; line-height: 1.55; }
+  .job-sub b { color: #7bffb2; }
+  #jobList { overflow-y: auto; touch-action: pan-y; display: flex; flex-direction: column; gap: 8px; }
+  .job-item {
+    display: flex; align-items: center; gap: 10px;
+    background: #262b42; border-radius: 14px; padding: 11px 12px;
+  }
+  .job-item.locked { opacity: .55; }
+  .job-emoji { font-size: 28px; flex-shrink: 0; }
+  .job-info { flex: 1; min-width: 0; }
+  .job-name { font-size: 14px; font-weight: 800; }
+  .job-desc { font-size: 11px; color: #9aa0c0; margin-top: 2px; line-height: 1.45; }
+  .job-btn {
+    flex-shrink: 0; border: none; border-radius: 10px; cursor: pointer;
+    padding: 9px 12px; font-size: 12.5px; font-weight: 900;
+    background: #ffd83d; color: #22253a; white-space: nowrap;
+  }
+  .job-btn.cant { background: #3a4059; color: #7d84a5; }
+
   .big-btn {
     border: none; border-radius: 16px; padding: 16px 34px;
     font-size: 18px; font-weight: 900; cursor: pointer;
@@ -481,7 +517,7 @@
         <g id="bossBody">
           <path d="M40 260 L45 195 Q100 168 155 195 L160 260 Z" fill="#2f3542"/>
           <path d="M84 190 L100 235 L116 190 L104 184 L96 184 Z" fill="#f1f2f6"/>
-          <path d="M96 188 L104 188 L108 214 L100 232 L92 214 Z" fill="#c0392b"/>
+          <path id="tie" d="M96 188 L104 188 L108 214 L100 232 L92 214 Z" fill="#c0392b"/>
           <circle cx="63" cy="215" r="4" fill="#1e2430"/>
           <circle cx="137" cy="215" r="4" fill="#1e2430"/>
         </g>
@@ -491,11 +527,29 @@
           <!-- 귀 -->
           <ellipse cx="38" cy="115" rx="10" ry="15" fill="#f0bd90"/>
           <ellipse cx="162" cy="115" rx="10" ry="15" fill="#f0bd90"/>
-          <!-- 머리카락 (바코드 스타일) -->
-          <path d="M38 92 Q45 38 100 36 Q155 38 162 92 Q150 66 100 62 Q50 66 38 92 Z" fill="#3d3d3d"/>
-          <g stroke="#3d3d3d" stroke-width="4" fill="none">
-            <path d="M55 55 Q100 42 145 55"/>
-            <path d="M50 65 Q100 50 150 65"/>
+          <!-- 머리카락: 직급별 스타일 (JS가 표시/색상 전환) -->
+          <g id="hairBarcode">
+            <path d="M38 92 Q45 38 100 36 Q155 38 162 92 Q150 66 100 62 Q50 66 38 92 Z" fill="#3d3d3d"/>
+            <g stroke="#3d3d3d" stroke-width="4" fill="none">
+              <path d="M55 55 Q100 42 145 55"/>
+              <path d="M50 65 Q100 50 150 65"/>
+            </g>
+          </g>
+          <g id="hairFull" style="display:none">
+            <path d="M37 98 Q36 32 100 29 Q164 32 163 98 Q154 56 100 52 Q46 56 37 98 Z" fill="#2b2b2b"/>
+            <path d="M62 48 Q74 40 86 44 M104 42 Q116 36 130 44" stroke="#2b2b2b" stroke-width="5" fill="none" stroke-linecap="round"/>
+          </g>
+          <g id="hairSide" style="display:none">
+            <path d="M38 94 Q40 34 100 31 Q160 34 162 94 Q158 60 128 54 Q86 48 62 64 Q44 74 38 94 Z" fill="#3d3d3d"/>
+          </g>
+          <g id="hairBalding" style="display:none">
+            <path d="M38 96 Q36 72 52 62 Q56 82 62 98 Z" fill="#666"/>
+            <path d="M162 96 Q164 72 148 62 Q144 82 138 98 Z" fill="#666"/>
+            <path d="M58 54 Q100 42 142 54 Q100 49 58 54 Z" fill="#666" opacity=".85"/>
+          </g>
+          <g id="hairBald" style="display:none">
+            <path d="M40 98 Q37 82 46 74 Q52 88 57 100 Z" fill="#999"/>
+            <path d="M160 98 Q163 82 154 74 Q148 88 143 100 Z" fill="#999"/>
           </g>
           <!-- 눈썹 -->
           <g id="brows">
@@ -524,6 +578,14 @@
           </g>
           <!-- 코 -->
           <path d="M100 118 Q94 136 100 140 Q106 136 100 118" fill="#eab486"/>
+          <!-- 안경/콧수염: 직급별 (JS 토글) -->
+          <g id="glasses" style="display:none" fill="none" stroke="#2f3550" stroke-width="4">
+            <circle cx="72" cy="112" r="16"/>
+            <circle cx="128" cy="112" r="16"/>
+            <path d="M88 112 L112 112"/>
+            <path d="M56 106 L40 100 M144 106 L160 100"/>
+          </g>
+          <path id="mustache" style="display:none" d="M79 149 Q100 140 121 149 Q112 157 100 151 Q88 157 79 149 Z" fill="#3d3d3d"/>
           <!-- 입 -->
           <path id="mouth" d="M78 156 Q100 146 122 156" stroke="#a0522d" stroke-width="5" fill="none" stroke-linecap="round"/>
           <!-- 땀방울 -->
@@ -560,7 +622,7 @@
       </svg>
     </div>
 
-    <div id="throwHint">드래그로 던지거나 부장님을 터치! 장착한 무기가 날아갑니다 🎯<br>세게 던질수록 데미지 UP</div>
+    <div id="throwHint">드래그로 던지거나 상사를 터치! 장착한 무기가 날아갑니다 🎯<br>세게 던질수록 데미지 UP</div>
     <div id="flash"></div>
 
 
@@ -578,6 +640,14 @@
         <div id="natLineT">전국 집계 서버 연결 중… 📡</div>
         <div id="natMine"></div>
         <button class="big-btn" id="natClose">나도 계속 패러 가기</button>
+      </div>
+    </div>
+
+    <div id="jobOverlay">
+      <div id="jobPanel">
+        <div class="job-head">👑 회장 격파! 이직 타임</div>
+        <div class="job-sub" id="jobCareer"></div>
+        <div id="jobList"></div>
       </div>
     </div>
   </div>
@@ -885,7 +955,7 @@ const SFX = (() => {
 document.addEventListener('pointerdown', () => SFX.unlock(), { once: true });
 
 // 앱 진입 이벤트 (복귀 유저 판별용으로 저장된 부장님 세대도 함께)
-Track('app_open', { boss_level: +(localStorage.getItem('bossLevel') || 1), returning: !!localStorage.getItem('hitCount') });
+Track('app_open', { rank: +(localStorage.getItem('rank') || 1), company: +(localStorage.getItem('company') || 0), returning: !!localStorage.getItem('hitCount') });
 
 /* ═══════════════════ 탭 전환 ═══════════════════ */
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -959,12 +1029,57 @@ const Throw = (() => {
   const shopCiderEl = $('#shopCider');
   const throwHintEl = $('#throwHint');
 
-  // 부장님 세대(레벨)와 체력은 저장/복원
-  // 세대별 최대 멘탈: 초반(1~5세대)은 1~3초 만에 터지는 속전속결로 도파민을 챙기고,
-  // 세대가 오를수록 가파르게 올라 최종 무기 연타 기준 10초 수준(최대 3,500)에서 수렴
-  const mentalCap = lv => Math.min(3500, Math.round(60 * Math.pow(1.35, lv - 1)));
-  let bossLevel = +(localStorage.getItem('bossLevel') || 1);
-  let maxMental = mentalCap(bossLevel);
+  /* ── 직급 사다리 & 회사 (이직 = 환생) ──
+     한 회사 = 사원부터 회장까지 13직급. 회장을 잡으면 이직 — 경력 1회당 영구 데미지 +15%.
+     face: 직급별 외모 (hair 스타일/색, 안경, 콧수염, 넥타이 색) */
+  const RANKS = [
+    { name: '사원',   face: { hair: 'Full',    color: '#2b2b2b', glasses: 0, must: 0, tie: '#3b6ea5' } },
+    { name: '주임',   face: { hair: 'Full',    color: '#40342a', glasses: 0, must: 0, tie: '#2e8b57' } },
+    { name: '대리',   face: { hair: 'Side',    color: '#3d3d3d', glasses: 1, must: 0, tie: '#5b6ee1' } },
+    { name: '과장',   face: { hair: 'Side',    color: '#4a3020', glasses: 0, must: 1, tie: '#8e44ad' } },
+    { name: '차장',   face: { hair: 'Barcode', color: '#3d3d3d', glasses: 1, must: 0, tie: '#16a085' } },
+    { name: '부장',   face: { hair: 'Barcode', color: '#3d3d3d', glasses: 0, must: 1, tie: '#c0392b' } },
+    { name: '이사',   face: { hair: 'Balding', color: '#4d4d4d', glasses: 1, must: 1, tie: '#d35400' } },
+    { name: '상무',   face: { hair: 'Balding', color: '#6e6e6e', glasses: 0, must: 1, tie: '#2c3e50' } },
+    { name: '전무',   face: { hair: 'Bald',    color: '#8a8a8a', glasses: 1, must: 1, tie: '#7f8c8d' } },
+    { name: '부사장', face: { hair: 'Side',    color: '#98a0a8', glasses: 1, must: 0, tie: '#27ae60' } },
+    { name: '사장',   face: { hair: 'Balding', color: '#b8bcc2', glasses: 1, must: 1, tie: '#f39c12' } },
+    { name: '부회장', face: { hair: 'Full',    color: '#cfd3d8', glasses: 1, must: 0, tie: '#6c5ce7' } },
+    { name: '회장',   face: { hair: 'Bald',    color: '#e8e8e8', glasses: 1, must: 1, tie: '#d4af37' } },
+  ];
+  // 이직으로 갈 수 있는 회사들. req = 이전 단계 회사에서 필요한 이직 횟수 (유저가 골라서 이동)
+  const COMPANIES = [
+    { name: '동네 중소기업',     emoji: '🏠',  size: '직원 10명',      hpMul: 1,   rwMul: 1,  req: 0 },
+    { name: '탄탄한 중소기업',   emoji: '🏢',  size: '직원 100명',     hpMul: 6,   rwMul: 3,  req: 3 },
+    { name: '잘나가는 강소기업', emoji: '🏬',  size: '직원 500명',     hpMul: 30,  rwMul: 8,  req: 5 },
+    { name: '상장한 중견기업',   emoji: '🏙️', size: '직원 2,000명',   hpMul: 150, rwMul: 20, req: 8 },
+    { name: '국민 대기업',       emoji: '🌆',  size: '직원 30,000명',  hpMul: 800, rwMul: 50, req: 12 },
+  ];
+
+  let company = clamp(+(localStorage.getItem('company') || 0), 0, COMPANIES.length - 1);
+  let rank = clamp(+(localStorage.getItem('rank') || localStorage.getItem('bossLevel') || 1), 1, RANKS.length);
+  let transfers = JSON.parse(localStorage.getItem('transfers') || '[]');
+  while (transfers.length < COMPANIES.length) transfers.push(0);
+  let up = JSON.parse(localStorage.getItem('upgrades') || '{"dmg":0,"crit":0,"cdmg":0}');
+  localStorage.removeItem('bossLevel'); // 구버전 키는 rank로 이관 후 정리
+
+  function saveCareer() {
+    localStorage.setItem('rank', rank);
+    localStorage.setItem('company', company);
+    localStorage.setItem('transfers', JSON.stringify(transfers));
+    localStorage.setItem('upgrades', JSON.stringify(up));
+  }
+
+  const totalTransfers = () => transfers.reduce((a, b) => a + b, 0);
+  const careerMult = () => 1 + totalTransfers() * 0.15;           // 이직 1회당 영구 +15%
+  const dmgMult = () => careerMult() * (1 + up.dmg * 0.25);       // 능력치: 레벨당 +25%
+  const critChance = () => Math.min(0.12 + up.crit * 0.02, 0.6);  // 기본 12%, 상한 60%
+  const critMult = () => 1.9 + up.cdmg * 0.15;                    // 기본 1.9배
+
+  // 직급별 멘탈: 사원은 1~2초 컷 → 직급당 1.35배, 회장은 최종 보스 보정 x2, 회사 배율 곱
+  const hpFor = () => Math.round(60 * Math.pow(1.35, rank - 1) * COMPANIES[company].hpMul * (rank === RANKS.length ? 2 : 1));
+
+  let maxMental = hpFor();
   const savedMental = parseFloat(localStorage.getItem('mental'));
   let mental = savedMental > 0 ? Math.min(savedMental, maxMental) : maxMental;
   let hits = +(localStorage.getItem('hitCount') || 0);
@@ -982,6 +1097,17 @@ const Throw = (() => {
     { id: 'gun',      emoji: '🔫',  name: '고무줄 권총',    desc: '즉발 사격! 탕비실의 전설적인 저격수',     dmg: [33, 44],  price: 2800, flight: 'shot',  spin: 0,   size: 52, hitText: '탕!',   critText: '헤드샷!!' },
     { id: 'brief',    emoji: '💼',  name: '서류가방 풀스윙', desc: '인사팀도 못 막는 직장인 최종병기',        dmg: [42, 55],  price: 4500, flight: 'throw', spin: 2.6, size: 60, hitText: '퍼엉!', critText: '월급날 풀스윙!!' },
   ];
+  // 능력치 업그레이드 (무기와 별개, 비용은 레벨당 지수 증가 — 무한 사이다 싱크)
+  const UPGRADES = [
+    { id: 'dmg',  emoji: '💪', name: '헬스장 등록',  base: 100, growth: 1.55, max: 999,
+      stat: lv => `기본 데미지 +${lv * 25}% → +${(lv + 1) * 25}%` },
+    { id: 'crit', emoji: '🎯', name: '급소 공략',    base: 150, growth: 1.6,  max: 24,
+      stat: lv => lv >= 24 ? `크리티컬 확률 60% (최대)` : `크리티컬 확률 ${12 + lv * 2}% → ${12 + (lv + 1) * 2}%` },
+    { id: 'cdmg', emoji: '💥', name: '분노의 한 방', base: 120, growth: 1.5,  max: 999,
+      stat: lv => `크리티컬 데미지 x${(1.9 + lv * 0.15).toFixed(2)} → x${(1.9 + (lv + 1) * 0.15).toFixed(2)}` },
+  ];
+  const upCost = u => Math.round(u.base * Math.pow(u.growth, up[u.id]));
+
   let cider = +(localStorage.getItem('cider') || 0);
   let owned = JSON.parse(localStorage.getItem('weapons') || '["fist"]');
   let equipId = localStorage.getItem('equip') || 'fist';
@@ -1038,10 +1164,10 @@ const Throw = (() => {
     '이런 것도 하나 제대로 못 맞히나?', '거봐, 센스가 없다니까~',
   ];
   const KO_SUBS = [
-    '부장님이 조퇴하셨습니다.\n오늘의 사이다 지수: 💯',
-    '부장님: "나… 재택근무 할게…"',
-    '부장님이 멘탈을 찾으러 퇴근했습니다.',
-    '인사팀에서 새 부장님을 발령했습니다. 무한리필!',
+    '상사가 조퇴하셨습니다.\n오늘의 사이다 지수: 💯',
+    '상사: "나… 재택근무 할게…"',
+    '상사가 멘탈을 찾으러 퇴근했습니다.',
+    '인사팀에서 다음 상사를 발령했습니다. 무한리필!',
   ];
 
   // 물리 상태
@@ -1100,6 +1226,31 @@ const Throw = (() => {
     // 눈썹
     faceEls.browL.setAttribute('d', state === 'idle' ? 'M55 92 L85 98' : 'M55 100 L85 90');
     faceEls.browR.setAttribute('d', state === 'idle' ? 'M145 92 L115 98' : 'M145 100 L115 90');
+  }
+
+  // 직급별 외모 적용: 머리 스타일/색, 안경, 콧수염, 넥타이
+  const HAIR_IDS = ['hairBarcode', 'hairFull', 'hairSide', 'hairBalding', 'hairBald'];
+  function setBossFace() {
+    const f = RANKS[rank - 1].face;
+    HAIR_IDS.forEach(id => {
+      const g = document.getElementById(id);
+      const on = id === 'hair' + f.hair;
+      g.style.display = on ? '' : 'none';
+      if (on) g.querySelectorAll('*').forEach(el => {
+        if (el.getAttribute('fill') && el.getAttribute('fill') !== 'none') el.setAttribute('fill', f.color);
+        if (el.getAttribute('stroke') && el.getAttribute('stroke') !== 'none') el.setAttribute('stroke', f.color);
+      });
+    });
+    $('#glasses').style.display = f.glasses ? '' : 'none';
+    const m = $('#mustache');
+    m.style.display = f.must ? '' : 'none';
+    m.setAttribute('fill', f.color);
+    $('#tie').setAttribute('fill', f.tie);
+  }
+
+  function applyBossVisuals() {
+    setBossFace();
+    $('#mentalLabel').textContent = `${COMPANIES[company].name} · ${RANKS[rank - 1].name} 멘탈`;
   }
 
   function bossRect() {
@@ -1301,15 +1452,16 @@ const Throw = (() => {
     const w = weapon();
     const wIdx = WEAPONS.indexOf(w);
     // 티어/데미지: 드래그는 던진 속도 기준, 터치 자동 투척은 무기 기본 데미지
+    // 최종 데미지 = 무기 굴림 x 경력(이직) x 능력치 x 크리 배수
     let tier, dmg;
-    const base = rand(w.dmg[0], w.dmg[1]);
+    const base = rand(w.dmg[0], w.dmg[1]) * dmgMult();
     if (throwMode === 'auto') {
       tier = autoCrit ? 2 : 1;
-      dmg = base * (autoCrit ? 1.9 : 1);
+      dmg = base * (autoCrit ? critMult() : 1);
     } else {
       const isCrit = speed > 46 || (combo >= 4 && speed > 34);
       tier = isCrit ? 2 : speed > 26 ? 1 : 0;
-      dmg = base * (tier === 2 ? 2.2 : tier === 1 ? 1.2 : 0.6);
+      dmg = base * (tier === 2 ? critMult() + 0.3 : tier === 1 ? 1.2 : 0.6);
     }
     throwMode = 'drag';
 
@@ -1326,7 +1478,7 @@ const Throw = (() => {
       setFace('dizzy');
       say(pick(HIT_CRIT), 1500);
       vibrate([60, 40, 80]);
-      addCider(2);
+      addCider(2 * COMPANIES[company].rwMul);
     } else if (tier === 1) {
       SFX.hit(1.1 + wIdx * 0.15); SFX.grunt(1);
       shake(screen, heavy ? 'shake-l' : 'shake-m');
@@ -1335,7 +1487,7 @@ const Throw = (() => {
       setFace('hit');
       if (Math.random() < 0.6) say(pick(HIT_MID), 1300);
       vibrate(50);
-      addCider(1);
+      addCider(COMPANIES[company].rwMul);
     } else {
       SFX.hit(0.6);
       shake(screen, 'shake-s');
@@ -1344,7 +1496,7 @@ const Throw = (() => {
       setFace('hit');
       say(pick(HIT_WEAK), 1200);
       vibrate(25);
-      addCider(1);
+      addCider(COMPANIES[company].rwMul);
     }
 
     registerHit(dmg);
@@ -1392,7 +1544,7 @@ const Throw = (() => {
     strikeChain++;
     clearTimeout(strikeChainTimer);
     strikeChainTimer = setTimeout(() => strikeChain = 0, 900);
-    autoCrit = (strikeChain >= 5 && strikeChain % 5 === 0) || Math.random() < 0.12;
+    autoCrit = (strikeChain >= 5 && strikeChain % 5 === 0) || Math.random() < critChance();
 
     // 어디를 터치해도 얼굴을 향해 날아가도록 조준점을 얼굴 판정 영역 안으로 클램프
     const fr = bossRect();
@@ -1531,47 +1683,151 @@ const Throw = (() => {
 
   function updateMental() {
     mentalFillEl.style.width = (mental / maxMental * 100) + '%';
-    mentalNumEl.textContent = Math.ceil(mental) + ' / ' + maxMental;
+    mentalNumEl.textContent = fmt(Math.ceil(mental)) + ' / ' + fmt(maxMental);
   }
 
   function ko() {
     SFX.fanfare();
     setFace('ko');
-    const reward = 50 + (bossLevel - 1) * 20; // 위로금: 세대가 높을수록 두둑하게
+    const isFinal = rank === RANKS.length; // 회장 격파 → 이직 타임
+    const reward = Math.round((20 + 15 * rank) * COMPANIES[company].rwMul * (isFinal ? 3 : 1));
     addCider(reward);
-    Track('boss_ko', { level: bossLevel, weapon: equipId, total_hits: hits });
+    Track('boss_ko', { rank, rank_name: RANKS[rank - 1].name, company, weapon: equipId, total_hits: hits });
     bossWrap.style.transition = 'transform .8s';
     bossWrap.style.transform = 'translateX(-50%) translateY(30px) rotate(90deg)';
     burstParticles(screen, screen.clientWidth / 2, screen.clientHeight * 0.35, ['🎉', '⭐', '💫', '🥤', '💰'], 22, 12);
     vibrate([80, 60, 80, 60, 150]);
-    // 흐름 안 끊기게 오버레이 없이 연출만 띄우고 자동으로 다음 부장님 출근
+    // 흐름 안 끊기게 오버레이 없이 연출만 띄우고 자동으로 다음 직급 상사 출근
     setTimeout(() => {
       const cw = screen.clientWidth, ch = screen.clientHeight;
-      fxText(screen, cw / 2, ch * 0.3, 'K.O.!', 62, '#ffd83d', 1500);
+      fxText(screen, cw / 2, ch * 0.3, isFinal ? '👑 회장 격파!!' : 'K.O.!', isFinal ? 44 : 62, '#ffd83d', 1500);
       fxText(screen, cw / 2, ch * 0.44, pick(KO_SUBS).split('\n')[0], 17, '#dfe3ff', 1500);
       fxText(screen, cw / 2, ch * 0.54, `위로금 +${fmt(reward)} 🥤`, 24, '#7bffb2', 1500);
     }, 400);
-    setTimeout(nextBoss, 2000);
+    if (isFinal) setTimeout(openJobPanel, 1900);
+    else setTimeout(nextBoss, 2000);
   }
 
   function nextBoss() {
-    bossLevel++;
-    maxMental = mentalCap(bossLevel); // 세대가 바뀔수록 멘탈이 단단한 부장님 등장
+    rank++;
+    spawnBoss();
+    say(`다음 상대는 ${RANKS[rank - 1].name}! 멘탈 ${fmt(maxMental)}짜리다. 어디 한번 해봐~`, 2500);
+  }
+
+  // 새 상사 등장: 직급 얼굴/라벨/멘탈 갱신
+  function spawnBoss() {
+    maxMental = hpFor();
     mental = maxMental;
-    localStorage.setItem('bossLevel', bossLevel);
+    saveCareer();
     localStorage.setItem('mental', mental);
     updateMental();
-    $('#mentalLabel').textContent = `상사 멘탈 (${bossLevel}대째)`;
+    applyBossVisuals();
     bossWrap.style.transition = 'transform .4s';
     bossWrap.style.transform = 'translateX(-50%)';
     setFace('idle');
-    say(`신임 부장이다. 멘탈 ${maxMental}짜리지. 잘 부탁해~ 참, 오늘 야근이야.`, 2500);
+  }
+
+  /* ── 이직(환생): 회장을 잡으면 회사를 골라서 이동, 경력 1회당 영구 데미지 +15% ── */
+  function openJobPanel() {
+    renderJobs();
+    $('#jobOverlay').classList.add('show');
+    Track('job_panel_opened', { company, career: totalTransfers() });
+  }
+
+  function renderJobs() {
+    $('#jobCareer').innerHTML =
+      `이직할 때마다 데미지 <b>+15% 영구</b> 상승!<br>경력 ${totalTransfers()}회 · 배수 x${careerMult().toFixed(2)} → 이직 후 <b>x${(careerMult() + 0.15).toFixed(2)}</b>`;
+    const list = $('#jobList');
+    list.innerHTML = '';
+    COMPANIES.forEach((c, i) => {
+      const unlocked = i === 0 || transfers[i - 1] >= c.req;
+      const row = document.createElement('div');
+      row.className = 'job-item' + (unlocked ? '' : ' locked');
+      const lockTxt = unlocked ? '' : `<br>🔒 ${COMPANIES[i - 1].name} 이직 ${c.req}회 필요 (현재 ${transfers[i - 1]}회)`;
+      row.innerHTML = `
+        <div class="job-emoji">${c.emoji}</div>
+        <div class="job-info">
+          <div class="job-name">${c.name}</div>
+          <div class="job-desc">${c.size} · 멘탈 x${fmt(c.hpMul)} · 보상 x${fmt(c.rwMul)}${lockTxt}</div>
+        </div>`;
+      const btn = document.createElement('button');
+      btn.className = 'job-btn' + (unlocked ? '' : ' cant');
+      btn.textContent = unlocked ? (i === company ? '재입사' : '입사') : '잠김';
+      btn.addEventListener('click', () => {
+        if (!unlocked) { SFX.thud(); return; }
+        doTransfer(i);
+      });
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  }
+
+  function doTransfer(to) {
+    transfers[company]++; // 방금 회장까지 부순 회사 기준으로 이직 경력 +1
+    const from = company;
+    company = to;
+    rank = 1;
+    $('#jobOverlay').classList.remove('show');
+    SFX.buy();
+    vibrate([40, 30, 60]);
+    Track('job_transfer', { from, to, career: totalTransfers() });
+    spawnBoss();
+    burstParticles(screen, screen.clientWidth / 2, screen.clientHeight * 0.3, ['🎉', '📦', '💼', '✨'], 18, 11);
+    fxText(screen, screen.clientWidth / 2, screen.clientHeight * 0.3, `${COMPANIES[to].name} 입사! 데미지 x${careerMult().toFixed(2)}`, 20, '#7bffb2', 1600);
+    say(`어서 와, 신입? 여긴 ${COMPANIES[to].name}이야. 난 여기 ${RANKS[0].name}이고~ 잘 부탁해`, 2600);
   }
 
   /* ── 상점 UI ── */
   function renderShop() {
     const list = $('#shopList');
     list.innerHTML = '';
+    const sec = t => {
+      const el = document.createElement('div');
+      el.className = 'shop-sec';
+      el.textContent = t;
+      list.appendChild(el);
+    };
+
+    // 능력치 업그레이드 (데미지/크리 확률/크리 데미지)
+    sec(`💪 자기계발 · 경력 ${totalTransfers()}회 (이직 보너스 x${careerMult().toFixed(2)})`);
+    UPGRADES.forEach(u => {
+      const lv = up[u.id];
+      const cost = upCost(u);
+      const maxed = lv >= u.max;
+      const row = document.createElement('div');
+      row.className = 'shop-item';
+      row.innerHTML = `
+        <div class="si-emoji">${u.emoji}</div>
+        <div class="si-info">
+          <div class="si-name">${u.name} <span class="si-dmg">Lv.${lv}</span></div>
+          <div class="si-desc">${u.stat(lv)}</div>
+        </div>`;
+      const btn = document.createElement('button');
+      btn.className = 'si-btn';
+      if (maxed) { btn.textContent = 'MAX'; btn.classList.add('own'); btn.disabled = true; }
+      else { btn.textContent = fmt(cost) + ' 🥤'; if (cider < cost) btn.classList.add('cant'); }
+      btn.addEventListener('click', () => {
+        if (maxed) return;
+        if (cider >= cost) {
+          cider -= cost;
+          up[u.id]++;
+          saveCareer();
+          saveShop();
+          updateCider();
+          Track('upgrade_purchased', { stat: u.id, level: up[u.id], cost });
+          SFX.buy();
+          vibrate(30);
+          renderShop();
+        } else {
+          SFX.thud();
+          fxText($('#shopPanel'), $('#shopPanel').clientWidth / 2, 60, '사이다가 부족합니다 😢', 16, '#ff8a94');
+        }
+      });
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+
+    sec('🗡️ 무기고');
     WEAPONS.forEach(w => {
       const isOwned = owned.includes(w.id);
       const isEquipped = equipId === w.id;
@@ -1606,7 +1862,7 @@ const Throw = (() => {
             rank: WEAPONS.indexOf(w),          // 상점 진행도: 1(볼펜)~6(서류가방)
             weapons_owned: owned.length,        // 지금까지 보유한 무기 수
             reached_final: w.id === WEAPONS[WEAPONS.length - 1].id, // 최종 무기 도달 여부
-            boss_level: bossLevel,
+            rank, company,
           });
           updateProjectile();
           updateCider();
@@ -1643,7 +1899,8 @@ const Throw = (() => {
   updateProjectile();
   fetchNatStats();
   setInterval(fetchNatStats, 30000); // HUD의 전국 타격 수를 준실시간으로 갱신
-  if (bossLevel > 1) $('#mentalLabel').textContent = `상사 멘탈 (${bossLevel}대째)`;
+  applyBossVisuals();
+  saveCareer(); // 구버전 저장(bossLevel) 이관분을 새 키로 즉시 확정
 
   return { layout };
 })();
