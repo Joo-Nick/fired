@@ -146,6 +146,25 @@
     font-size: 11px; font-weight: 900; color: #fff; letter-spacing: .5px;
     text-shadow: 0 1px 3px rgba(0,0,0,.9);
   }
+  #rushWrap { margin-top: 6px; }
+  #rushTop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; font-size: 10px; font-weight: 900; color: #9ba3c7; }
+  #rushTop b { color: #7cf7ff; letter-spacing: .5px; }
+  #rushBar { position: relative; height: 10px; overflow: hidden; border-radius: 999px; background: rgba(0,0,0,.55); border: 1px solid rgba(124,247,255,.2); }
+  #rushFill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#50d8ff,#765cff 55%,#ff477e); transition: width .16s linear; box-shadow: 0 0 14px rgba(80,216,255,.75); }
+  #throwScreen.rush-active { box-shadow: inset 0 0 48px rgba(93,223,255,.3), inset 0 0 120px rgba(122,54,255,.18); }
+  #throwScreen.rush-active #rushWrap { filter: drop-shadow(0 0 8px rgba(124,247,255,.9)); }
+  #throwScreen.rush-active #rushTop b { color: #fff; animation: rushPulse .42s infinite alternate; }
+  @keyframes rushPulse { to { transform: scale(1.08); text-shadow: 0 0 12px #7cf7ff; } }
+  #runInfo { margin-top: 5px; display: flex; align-items: center; gap: 6px; font-size: 9px; font-weight: 900; color: #c7ccec; }
+  #runLevel { color: #7bffb2; white-space: nowrap; }
+  #xpTrack { flex: 1; height: 5px; overflow: hidden; border-radius: 999px; background: rgba(0,0,0,.5); }
+  #xpFill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#5cf2a4,#e9ff78); transition: width .25s; }
+  #bossTimer { min-width: 43px; color: #ff9da6; text-align: right; font-variant-numeric: tabular-nums; }
+  #bossTimer.danger { color: #fff; text-shadow: 0 0 8px #ff334d; animation: rushPulse .28s infinite alternate; }
+  #careerGoal { margin-top: 5px; display: flex; align-items: center; gap: 7px; color: #9aa0c0; font-size: 9px; font-weight: 800; }
+  #careerGoal b { color: #ffd83d; white-space: nowrap; }
+  #careerTrack { flex: 1; height: 4px; overflow: hidden; border-radius: 999px; background: rgba(0,0,0,.5); }
+  #careerFill { width: 2%; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#ffd83d,#ff784e); transition: width .35s; }
 
   #bossWrap {
     position: absolute; left: 50%; top: 24%;
@@ -154,7 +173,10 @@
     z-index: 5;
     transition: filter .2s;
   }
-  #bossSvg { width: 100%; display: block; overflow: visible; }
+  #bossSvg {
+    width: 100%; display: block; overflow: visible;
+    transform-origin: 50% 38%; will-change: transform, filter;
+  }
 
   #bubble {
     position: absolute; left: 50%; top: calc(24% + 28px); /* 부장님 머리 바로 위 */
@@ -212,15 +234,85 @@
   }
   .particle { position: absolute; z-index: 35; pointer-events: none; will-change: transform, opacity; }
 
+  /* 타격감: 찰나의 눌림 → 반동, 충격파, 방사형 스피드라인 */
+  #bossSvg.boss-impact-s { animation: bossImpactS .26s cubic-bezier(.2,.85,.3,1); }
+  #bossSvg.boss-impact-m { animation: bossImpactM .34s cubic-bezier(.18,.9,.28,1); }
+  #bossSvg.boss-impact-l { animation: bossImpactL .46s cubic-bezier(.15,.9,.25,1); }
+  @keyframes bossImpactS {
+    0%,100% { transform: translate(0) scale(1); }
+    12% { transform: translateY(4px) scale(1.055,.94); }
+    34% { transform: translateY(-3px) scale(.98,1.035); }
+    62% { transform: translateY(1px) scale(1.012,.99); }
+  }
+  @keyframes bossImpactM {
+    0%,100% { transform: translate(0) rotate(0) scale(1); }
+    10% { transform: translate(-5px,7px) rotate(-2deg) scale(1.1,.88); }
+    30% { transform: translate(7px,-6px) rotate(2.5deg) scale(.95,1.08); }
+    52% { transform: translate(-3px,2px) rotate(-1deg) scale(1.025,.98); }
+    72% { transform: translate(2px,-1px) rotate(.5deg) scale(.992,1.01); }
+  }
+  @keyframes bossImpactL {
+    0%,100% { transform: translate(0) rotate(0) scale(1); filter: brightness(1); }
+    7% { transform: translate(-9px,10px) rotate(-4deg) scale(1.15,.82); filter: brightness(1.7) contrast(1.2); }
+    22% { transform: translate(13px,-11px) rotate(4.5deg) scale(.91,1.14); }
+    40% { transform: translate(-8px,5px) rotate(-2.5deg) scale(1.06,.94); }
+    58% { transform: translate(5px,-3px) rotate(1.5deg) scale(.97,1.04); }
+    76% { transform: translate(-2px,1px) rotate(-.5deg) scale(1.015,.99); }
+  }
+  .hit-stop #bossSvg { filter: brightness(1.55) contrast(1.18) saturate(.78); }
+
+  .impact-ring {
+    --impact-color: #cfd3ec;
+    position: absolute; z-index: 34; pointer-events: none;
+    width: 44px; height: 44px; border: 4px solid var(--impact-color); border-radius: 50%;
+    transform: translate(-50%,-50%) scale(.2); opacity: .95;
+    box-shadow: 0 0 12px var(--impact-color), inset 0 0 10px var(--impact-color);
+    animation: impactRing .42s cubic-bezier(.1,.7,.2,1) forwards;
+  }
+  .impact-ring.impact-m { --impact-color: #ffd83d; border-width: 6px; }
+  .impact-ring.impact-l { --impact-color: #ff4757; border-width: 8px; }
+  @keyframes impactRing {
+    70% { opacity: .72; }
+    100% { transform: translate(-50%,-50%) scale(var(--ring-scale,3.7)); opacity: 0; }
+  }
+
+  .impact-rays {
+    --impact-color: #cfd3ec;
+    position: absolute; z-index: 33; pointer-events: none;
+    left: 0; top: 0; width: 0; height: 0;
+  }
+  .impact-rays.impact-m { --impact-color: #ffd83d; }
+  .impact-rays.impact-l { --impact-color: #ff6b7a; }
+  .impact-rays span {
+    position: absolute; left: 0; top: 0; width: var(--ray-length); height: 5px;
+    border-radius: 999px; transform-origin: 0 50%; opacity: 0;
+    background: linear-gradient(90deg, var(--impact-color), transparent);
+    transform: rotate(var(--ray-angle)) translateX(26px) scaleX(.18);
+    animation: impactRay .34s var(--ray-delay) cubic-bezier(.1,.8,.2,1) forwards;
+  }
+  @keyframes impactRay {
+    12% { opacity: 1; }
+    70% { opacity: .75; }
+    100% { opacity: 0; transform: rotate(var(--ray-angle)) translateX(52px) scaleX(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shake-s, .shake-m, .shake-l { animation: none !important; }
+    #bossSvg.boss-impact-s, #bossSvg.boss-impact-m, #bossSvg.boss-impact-l { animation-duration: .14s; }
+    .impact-rays span { animation-duration: .16s; }
+    .impact-ring { animation-duration: .2s; }
+  }
+
   /* 무기 타격 연출 */
   #bossWrap { cursor: pointer; }
   #paperEmoji {
     display: none; width: 100%; height: 100%;
     align-items: center; justify-content: center;
-    font-size: 56px; line-height: 1;
   }
+  #paperEmoji img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(0,0,0,.45)); }
+  .weapon-fx-img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
   /* 볼펜: 정수리에 수직으로 꽂혀서 부들부들 */
-  .stuck-pen { position: absolute; z-index: 36; font-size: 38px; pointer-events: none; animation: stuckWobble 1s forwards; }
+  .stuck-pen { position: absolute; z-index: 36; width: 70px; height: 70px; pointer-events: none; animation: stuckWobble 1s forwards; }
   @keyframes stuckWobble {
     0%   { transform: translate(-50%, -94%) rotate(-62deg); opacity: 1; }
     14%  { transform: translate(-50%, -94%) rotate(-32deg); }
@@ -234,7 +326,7 @@
   /* 몽둥이: 오른쪽 → 왼쪽 풀스윙 */
   .swing-side {
     position: absolute; z-index: 38; pointer-events: none;
-    font-size: 74px; line-height: 1;
+    width: 118px; height: 118px;
     animation: swingSide .3s cubic-bezier(.4,.05,.2,1) forwards;
     filter: drop-shadow(0 4px 10px rgba(0,0,0,.5));
   }
@@ -249,7 +341,7 @@
   /* 키보드: 머리 위에서 휘둘러 내리찍는 스매시 */
   .swing-smash {
     position: absolute; z-index: 38; pointer-events: none;
-    font-size: 68px; line-height: 1;
+    width: 132px; height: 132px;
     animation: swingSmash .32s cubic-bezier(.5,.05,.3,1) forwards;
     filter: drop-shadow(0 4px 10px rgba(0,0,0,.5));
   }
@@ -325,6 +417,7 @@
   }
   .shop-item.equipped { outline: 2px solid #ffd83d; }
   .si-emoji { font-size: 30px; flex-shrink: 0; }
+  .weapon-icon { width: 52px; height: 52px; flex-shrink: 0; object-fit: contain; filter: drop-shadow(0 4px 5px rgba(0,0,0,.45)); }
   .si-info { flex: 1; min-width: 0; }
   .si-name { font-size: 14px; font-weight: 800; }
   .si-dmg { font-size: 11px; color: #ff8a94; font-weight: 800; margin-left: 4px; }
@@ -338,6 +431,48 @@
   .si-btn.own { background: #2ecc71; color: #0e2b1b; }
   .si-btn.equipped { background: transparent; color: #ffd83d; border: 1.5px solid #ffd83d; }
   #shopClose { padding: 12px; font-size: 15px; }
+
+  #augmentOverlay {
+    position: absolute; inset: 0; z-index: 92; display: none; align-items: center; justify-content: center;
+    padding: 16px; background: radial-gradient(circle at 50% 28%,rgba(105,75,255,.34),rgba(7,8,18,.94) 62%); backdrop-filter: blur(7px);
+  }
+  #augmentOverlay.show { display: flex; }
+  #augmentPanel { width: 100%; max-width: 430px; padding: 18px 14px 14px; border-radius: 22px; border: 1px solid rgba(145,132,255,.55); background: linear-gradient(160deg,#222642,#15182b); box-shadow: 0 24px 70px rgba(0,0,0,.65),0 0 36px rgba(106,79,255,.25); }
+  .augment-kicker { text-align: center; color: #8eeeff; font-size: 11px; font-weight: 900; letter-spacing: 1.5px; }
+  .augment-title { margin-top: 4px; text-align: center; font-size: 23px; font-weight: 950; }
+  .augment-sub { margin: 5px 0 13px; text-align: center; color: #aab0d0; font-size: 11px; font-weight: 700; }
+  #augmentChoices { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .augment-card { min-width: 0; min-height: 174px; padding: 12px 8px; border: 1px solid rgba(255,255,255,.14); border-radius: 16px; color: #fff; background: linear-gradient(180deg,#303655,#21253c); font-family: inherit; cursor: pointer; box-shadow: 0 7px 0 #111425; transition: transform .12s,filter .12s; }
+  .augment-card:active { transform: translateY(5px) scale(.97); box-shadow: 0 2px 0 #111425; }
+  .augment-card .au-rarity { font-size: 9px; color: #8eeeff; font-weight: 900; letter-spacing: 1px; }
+  .augment-card .au-icon { display: block; margin: 9px 0 7px; font-size: 38px; filter: drop-shadow(0 0 10px rgba(255,216,61,.35)); }
+  .augment-card .au-name { display: block; font-size: 13px; font-weight: 950; line-height: 1.25; }
+  .augment-card .au-desc { display: block; margin-top: 7px; font-size: 10px; line-height: 1.45; color: #c8cce5; font-weight: 700; }
+  #augmentReroll { display: block; margin: 13px auto 0; padding: 9px 15px; border: 1px solid rgba(255,255,255,.18); border-radius: 11px; color: #dce1ff; background: #292e48; font-family: inherit; font-size: 11px; font-weight: 900; cursor: pointer; }
+  #augmentReroll:disabled { opacity: .42; cursor: default; }
+  #runLoadout { margin-top: 10px; min-height: 18px; text-align: center; color: #7cf7ff; font-size: 10px; font-weight: 800; }
+
+  #endingOverlay { position: absolute; inset: 0; z-index: 110; display: none; align-items: center; justify-content: center; padding: 18px; background: radial-gradient(circle at 50% 24%,rgba(255,202,58,.24),rgba(6,7,16,.97) 64%); backdrop-filter: blur(8px); }
+  #endingOverlay.show { display: flex; }
+  #endingPanel { width: 100%; max-width: 410px; padding: 24px 18px 18px; border-radius: 24px; border: 1px solid rgba(255,216,61,.5); background: linear-gradient(160deg,#272844,#17192b); text-align: center; box-shadow: 0 25px 80px rgba(0,0,0,.75),0 0 45px rgba(255,200,40,.18); }
+  .ending-crown { font-size: 64px; filter: drop-shadow(0 0 18px rgba(255,216,61,.5)); }
+  .ending-kicker { margin-top: 7px; color: #ffd83d; font-size: 11px; font-weight: 950; letter-spacing: 2px; }
+  .ending-title { margin-top: 3px; font-size: 29px; font-weight: 950; line-height: 1.18; }
+  .ending-copy { margin: 8px 0 15px; color: #c4c9e5; font-size: 12px; line-height: 1.55; font-weight: 700; }
+  #endingStats { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 14px; }
+  .ending-stat { padding: 10px 7px; border-radius: 13px; background: #22263e; color: #9299bd; font-size: 10px; font-weight: 800; }
+  .ending-stat b { display: block; margin-top: 3px; color: #fff; font-size: 16px; }
+  #newGamePlus { width: 100%; border: 0; border-radius: 14px; padding: 14px; color: #302000; background: linear-gradient(145deg,#ffe260,#ffab35); box-shadow: 0 5px 0 #a95c12,0 9px 25px rgba(255,184,50,.28); font-family: inherit; font-size: 15px; font-weight: 950; cursor: pointer; }
+  #newGamePlus:active { transform: translateY(3px); box-shadow: 0 2px 0 #a95c12; }
+
+  #rebirthOverlay { position: absolute; inset: 0; z-index: 105; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(7,8,17,.94); backdrop-filter: blur(8px); }
+  #rebirthOverlay.show { display: flex; }
+  #rebirthPanel { width: 100%; max-width: 390px; padding: 23px 18px 18px; border-radius: 22px; text-align: center; border: 1px solid rgba(255,103,126,.45); background: linear-gradient(160deg,#302139,#17192b); box-shadow: 0 25px 75px rgba(0,0,0,.7); }
+  .rebirth-icon { font-size: 55px; }
+  .rebirth-title { margin-top: 5px; font-size: 25px; font-weight: 950; }
+  .rebirth-copy { margin: 8px 0 15px; color: #c2c7df; font-size: 12px; line-height: 1.6; font-weight: 700; }
+  #rebirthGain { margin-bottom: 14px; padding: 12px; border-radius: 13px; color: #7bffb2; background: #20263a; font-size: 14px; font-weight: 950; }
+  #rebirthContinue { width: 100%; border: 0; border-radius: 14px; padding: 14px; color: #fff; background: linear-gradient(145deg,#ff5970,#b73b69); box-shadow: 0 5px 0 #6e213e; font-family: inherit; font-size: 15px; font-weight: 950; cursor: pointer; }
 
   /* 전국 타격 현황 버튼 (명중 카운터 대체): LIVE 점멸 점으로 실시간 집계임을 어필 */
   #natBtn { pointer-events: auto; cursor: pointer; font-family: inherit; border: 1px solid rgba(255,107,122,.45); }
@@ -506,6 +641,12 @@
           <div id="mentalFill"></div>
           <div id="mentalNum">100 / 100</div>
         </div>
+        <div id="rushWrap">
+          <div id="rushTop"><span>⚡ 퇴근 러시</span><b id="rushText">0%</b></div>
+          <div id="rushBar"><div id="rushFill"></div></div>
+        </div>
+        <div id="runInfo"><b id="runLevel">LV.1</b><div id="xpTrack"><div id="xpFill"></div></div><span id="runXp">0 / 25 EXP</span><b id="bossTimer">25.0s</b></div>
+        <div id="careerGoal"><b id="careerStep">목표 1 / 65</b><div id="careerTrack"><div id="careerFill"></div></div><span>최종: 대기업 회장</span></div>
       </div>
     </div>
 
@@ -608,7 +749,7 @@
     <div id="launchZone"></div>
 
     <div id="paper">
-      <div id="paperEmoji"></div>
+      <div id="paperEmoji"><img id="weaponProjectile" alt="" draggable="false"></div>
       <svg id="paperSvg" viewBox="0 0 74 96" xmlns="http://www.w3.org/2000/svg">
         <rect x="3" y="3" width="68" height="90" rx="5" fill="#fdfdf5" stroke="#d5d2c0" stroke-width="2"/>
         <text x="37" y="30" text-anchor="middle" font-size="16" font-weight="900" fill="#c0392b">사직서</text>
@@ -631,6 +772,38 @@
         <div id="shopHead">🛒 사내 매점 <span id="shopCider">0 🥤</span></div>
         <div id="shopList"></div>
         <button class="big-btn" id="shopClose">닫고 계속 조지기</button>
+      </div>
+    </div>
+
+    <div id="augmentOverlay" role="dialog" aria-modal="true" aria-labelledby="augmentTitle">
+      <div id="augmentPanel">
+        <div class="augment-kicker">BOSS REWARD · 3택 1</div>
+        <div class="augment-title" id="augmentTitle">업무 반격 증강</div>
+        <div class="augment-sub">이번 이직 런에 누적됩니다. 하나를 골라 폭주하세요.</div>
+        <div id="augmentChoices"></div>
+        <button id="augmentReroll">🔄 재추첨 · 30 🥤</button>
+        <div id="runLoadout"></div>
+      </div>
+    </div>
+
+    <div id="endingOverlay" role="dialog" aria-modal="true" aria-labelledby="endingTitle">
+      <div id="endingPanel">
+        <div class="ending-crown">🏆</div>
+        <div class="ending-kicker">TRUE ENDING · 정시퇴근</div>
+        <div class="ending-title" id="endingTitle">대한민국 모든 상사를<br>정복했습니다</div>
+        <div class="ending-copy">65명의 상사를 뚫고 마침내 칼퇴에 성공했습니다.<br>경력과 무기를 이어받아 더 강한 2회차를 시작할 수 있습니다.</div>
+        <div id="endingStats"></div>
+        <button id="newGamePlus">2회차 출근 · 영구 성장 유지</button>
+      </div>
+    </div>
+
+    <div id="rebirthOverlay" role="dialog" aria-modal="true" aria-labelledby="rebirthTitle">
+      <div id="rebirthPanel">
+        <div class="rebirth-icon">♻️</div>
+        <div class="rebirth-title" id="rebirthTitle">업무 시간 초과 · 강제 환생</div>
+        <div class="rebirth-copy">이 상사는 아직 너무 단단합니다.<br>사이다·무기·업그레이드는 그대로 두고 경력을 영구 공격력으로 바꿉니다.</div>
+        <div id="rebirthGain"></div>
+        <button id="rebirthContinue">더 강해져서 다시 출근</button>
       </div>
     </div>
 
@@ -709,8 +882,9 @@
   </div>
 </div>
 
-<script>
+<script type="module">
 'use strict';
+import { advanceCombatFlow, applyAugment, gainRunXp, getCareerProgress, getImpactProfile, getRebirthReward, getRunBonuses, readCombatFlow } from './game-core.mjs';
 /* ═══════════════════ 공통 유틸 ═══════════════════ */
 const $ = s => document.querySelector(s);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -1010,6 +1184,7 @@ const Throw = (() => {
   const screen = $('#throwScreen');
   const paper = $('#paper');
   const bossWrap = $('#bossWrap');
+  const bossSvg = $('#bossSvg');
   const bossHead = $('#bossHead');
   const bubble = $('#bubble');
   const canvas = $('#aimLine');
@@ -1028,6 +1203,8 @@ const Throw = (() => {
   const ciderAmtEl = $('#ciderAmt');
   const shopCiderEl = $('#shopCider');
   const throwHintEl = $('#throwHint');
+  const rushFillEl = $('#rushFill');
+  const rushTextEl = $('#rushText');
 
   /* ── 직급 사다리 & 회사 (이직 = 환생) ──
      한 회사 = 사원부터 회장까지 13직급. 회장을 잡으면 이직 — 경력 1회당 영구 데미지 +15%.
@@ -1050,16 +1227,18 @@ const Throw = (() => {
   // 이직으로 갈 수 있는 회사들. req = 이전 단계 회사에서 필요한 이직 횟수 (유저가 골라서 이동)
   const COMPANIES = [
     { name: '동네 중소기업',     emoji: '🏠',  size: '직원 10명',      hpMul: 1,   rwMul: 1,  req: 0 },
-    { name: '탄탄한 중소기업',   emoji: '🏢',  size: '직원 100명',     hpMul: 6,   rwMul: 3,  req: 3 },
-    { name: '잘나가는 강소기업', emoji: '🏬',  size: '직원 500명',     hpMul: 30,  rwMul: 8,  req: 5 },
-    { name: '상장한 중견기업',   emoji: '🏙️', size: '직원 2,000명',   hpMul: 150, rwMul: 20, req: 8 },
-    { name: '국민 대기업',       emoji: '🌆',  size: '직원 30,000명',  hpMul: 800, rwMul: 50, req: 12 },
+    { name: '탄탄한 중소기업',   emoji: '🏢',  size: '직원 100명',     hpMul: 6,   rwMul: 3,  req: 1 },
+    { name: '잘나가는 강소기업', emoji: '🏬',  size: '직원 500명',     hpMul: 30,  rwMul: 8,  req: 1 },
+    { name: '상장한 중견기업',   emoji: '🏙️', size: '직원 2,000명',   hpMul: 150, rwMul: 20, req: 1 },
+    { name: '국민 대기업',       emoji: '🌆',  size: '직원 30,000명',  hpMul: 800, rwMul: 50, req: 1 },
   ];
 
   let company = clamp(+(localStorage.getItem('company') || 0), 0, COMPANIES.length - 1);
   let rank = clamp(+(localStorage.getItem('rank') || localStorage.getItem('bossLevel') || 1), 1, RANKS.length);
   let transfers = JSON.parse(localStorage.getItem('transfers') || '[]');
   while (transfers.length < COMPANIES.length) transfers.push(0);
+  let gameClears = +(localStorage.getItem('gameClears') || 0);
+  let rebirthPower = +(localStorage.getItem('rebirthPower') || 0);
   let up = JSON.parse(localStorage.getItem('upgrades') || '{"dmg":0,"crit":0,"cdmg":0}');
   localStorage.removeItem('bossLevel'); // 구버전 키는 rank로 이관 후 정리
 
@@ -1068,10 +1247,12 @@ const Throw = (() => {
     localStorage.setItem('company', company);
     localStorage.setItem('transfers', JSON.stringify(transfers));
     localStorage.setItem('upgrades', JSON.stringify(up));
+    localStorage.setItem('gameClears', gameClears);
+    localStorage.setItem('rebirthPower', rebirthPower);
   }
 
   const totalTransfers = () => transfers.reduce((a, b) => a + b, 0);
-  const careerMult = () => 1 + totalTransfers() * 0.15;           // 이직 1회당 영구 +15%
+  const careerMult = () => 1 + totalTransfers() * 0.15 + gameClears * 0.5 + rebirthPower; // 이직·환생·엔딩 영구 성장
   const dmgMult = () => careerMult() * (1 + up.dmg * 0.25);       // 능력치: 레벨당 +25%
   const critChance = () => Math.min(0.12 + up.crit * 0.02, 0.6);  // 기본 12%, 상한 60%
   const critMult = () => 1.9 + up.cdmg * 0.15;                    // 기본 1.9배
@@ -1085,17 +1266,29 @@ const Throw = (() => {
   let hits = +(localStorage.getItem('hitCount') || 0);
   let combo = 0, bestCombo = +(localStorage.getItem('bestCombo') || 0);
   let comboTimer = null;
+  let combatFlow = { meter: 0, rushUntil: 0 };
+  let runBonuses = getRunBonuses();
+  let runAugments = [];
+  let runLevel = { level: 1, xp: 0, nextXp: 25, levelsGained: 0 };
+  let augmentContinue = null;
+  let rerolledThisReward = false;
+  const BOSS_TIME_MS = 25_000;
+  let bossDeadline = performance.now() + BOSS_TIME_MS;
+  let timerFrameAt = performance.now();
+  let rebirthTriggered = false;
 
   /* ── 재화(사이다) & 무기 상점 ── */
   // flight: throw(포물선 투척) / dart(직선, 꽂힘) / drop(하늘에서 내리찍기) / shot(즉발 사격)
   const WEAPONS = [
-    { id: 'fist',     emoji: '📄',  name: '사직서',         desc: '월급쟁이의 기본기, 정성껏 접어 던진다',   dmg: [7, 11],   price: 0,    flight: 'throw', spin: 1,   size: 0,  hitText: '착!',   critText: '사직서 크리티컬!!' },
-    { id: 'pen',      emoji: '🖊️', name: '결재 볼펜',      desc: '던지면 정수리에 그대로 꽂힌다',           dmg: [11, 16],  price: 150,  flight: 'dart',  spin: 0,   size: 46, hitText: '콕!',   critText: '정수리 관통!!' },
-    { id: 'keyboard', emoji: '⌨️', name: '기계식 키보드',  desc: '머리 위에서 풀타건으로 휘둘러 내리찍는다', dmg: [15, 22],  price: 400,  flight: 'swing', swing: 'smash', spin: 0, size: 58, hitText: '쾅!',   critText: '풀타건 스매시!!' },
-    { id: 'bat',      emoji: '🏏',  name: '야근 몽둥이',    desc: '오른쪽에서 왼쪽으로 시원하게 풀스윙',      dmg: [20, 28],  price: 900,  flight: 'swing', swing: 'side',  spin: 2.2, size: 56, hitText: '빠각!', critText: '홈런!!' },
-    { id: 'chair',    emoji: '🪑',  name: '사무용 의자',    desc: '회전의자 풀스윙, 모든 회사원의 로망',     dmg: [26, 35],  price: 1600, flight: 'throw', spin: 1.6, size: 64, hitText: '콰당!', critText: '체어샷!!' },
-    { id: 'gun',      emoji: '🔫',  name: '고무줄 권총',    desc: '즉발 사격! 탕비실의 전설적인 저격수',     dmg: [33, 44],  price: 2800, flight: 'shot',  spin: 0,   size: 52, hitText: '탕!',   critText: '헤드샷!!' },
-    { id: 'brief',    emoji: '💼',  name: '서류가방 풀스윙', desc: '인사팀도 못 막는 직장인 최종병기',        dmg: [42, 55],  price: 4500, flight: 'throw', spin: 2.6, size: 60, hitText: '퍼엉!', critText: '월급날 풀스윙!!' },
+    { id: 'fist',     emoji: '📄', name: '봉인 사직서',       asset: 'image/weapons/resignation-paper.png',  desc: '왁스 봉인까지 마친 월급쟁이의 기본기',       dmg: [7, 11],   price: 0,     flight: 'throw', spin: 1,   size: 76, hitText: '촤악!', critText: '퇴사 통보!!' },
+    { id: 'pen',      emoji: '🖊️', name: '결재 만년필',       asset: 'image/weapons/fountain-pen.png',       desc: '금촉이 정수리에 그대로 꽂히는 직선 병기',     dmg: [11, 16],  price: 150,   flight: 'dart',  spin: 0,   size: 70, hitText: '콕!',   critText: '최종 결재!!' },
+    { id: 'keyboard', emoji: '⌨️', name: '풀알루 기계식',     asset: 'image/weapons/mechanical-keyboard.png', desc: '풀타건으로 휘둘러 내리찍는 묵직한 키감',       dmg: [15, 22],  price: 400,   flight: 'swing', swing: 'smash', spin: 0, size: 82, hitText: '쾅!', critText: '청축 대폭발!!' },
+    { id: 'bat',      emoji: '🏏', name: '야근 기록 몽둥이',   asset: 'image/weapons/overtime-bat.png',       desc: '근태표와 사원증을 감아 만든 분노의 풀스윙',   dmg: [20, 28],  price: 900,   flight: 'swing', swing: 'side',  spin: 2.2, size: 76, hitText: '빠각!', critText: '야근 홈런!!' },
+    { id: 'chair',    emoji: '🪑', name: '임원용 체어샷',     asset: 'image/weapons/office-chair.png',       desc: '강철 캐스터까지 달린 회전의자 최종 진화형',   dmg: [26, 35],  price: 1600,  flight: 'throw', spin: 1.6, size: 84, hitText: '콰당!', critText: '회전 체어샷!!' },
+    { id: 'gun',      emoji: '🎯', name: '고무줄 결재총',     asset: 'image/weapons/rubber-band-pistol.png', desc: '자와 바인더클립으로 조립한 탕비실 저격병기',   dmg: [33, 44],  price: 2800,  flight: 'shot',  spin: 0,   size: 74, hitText: '탕!',   critText: '정시퇴근 저격!!' },
+    { id: 'brief',    emoji: '💼', name: '임원 서류가방',     asset: 'image/weapons/executive-briefcase.png', desc: '금장 모서리와 법무팀의 무게를 한 번에',         dmg: [42, 55],  price: 4500,  flight: 'throw', spin: 2.6, size: 82, hitText: '퍼엉!', critText: '월급날 풀스윙!!' },
+    { id: 'card',     emoji: '💳', name: '법인카드 부메랑',   asset: 'image/weapons/corporate-card.png',     desc: '한도 없는 금빛 궤적으로 되돌아오는 전설 무기', dmg: [55, 72],  price: 8000,  flight: 'throw', spin: 3.4, size: 86, hitText: '촤악!', critText: '무한한도!!' },
+    { id: 'stamp',    emoji: '🔨', name: '인사팀 해고 도장',   asset: 'image/weapons/dismissal-stamp.png',    desc: '커리어에 종지부를 찍는 신화급 최종 결재',       dmg: [70, 92],  price: 12500, flight: 'swing', swing: 'smash', spin: 0, size: 90, hitText: '쾅!!', critText: '해고 확정!!' },
   ];
   // 능력치 업그레이드 (무기와 별개, 비용은 레벨당 지수 증가 — 무한 사이다 싱크)
   const UPGRADES = [
@@ -1105,6 +1298,14 @@ const Throw = (() => {
       stat: lv => lv >= 24 ? `크리티컬 확률 60% (최대)` : `크리티컬 확률 ${12 + lv * 2}% → ${12 + (lv + 1) * 2}%` },
     { id: 'cdmg', emoji: '💥', name: '분노의 한 방', base: 120, growth: 1.5,  max: 999,
       stat: lv => `크리티컬 데미지 x${(1.9 + lv * 0.15).toFixed(2)} → x${(1.9 + (lv + 1) * 0.15).toFixed(2)}` },
+  ];
+  const AUGMENTS = [
+    { id: 'wrist',     icon: '💪', name: '손목 스냅',       desc: '이번 런 데미지 +20%' },
+    { id: 'rage',      icon: '😤', name: '분노 조절 실패', desc: '크리티컬 확률 +6%' },
+    { id: 'focus',     icon: '🎯', name: '집중 결재',       desc: '크리티컬 데미지 +25%' },
+    { id: 'overcharge',icon: '⚡', name: '사이다 과충전',   desc: '퇴근 러시 충전량 +25%' },
+    { id: 'fast-exit', icon: '🏃', name: '광속 퇴근',       desc: '퇴근 러시 지속 +2초' },
+    { id: 'bonus',     icon: '🧧', name: '성과급 탈취',     desc: '모든 사이다 보상 +50%' },
   ];
   const upCost = u => Math.round(u.base * Math.pow(u.growth, up[u.id]));
 
@@ -1125,10 +1326,129 @@ const Throw = (() => {
   }
 
   function addCider(n) {
-    cider += n;
+    cider += Math.max(0, Math.round(n));
     saveShop();
     updateCider();
   }
+
+  function isRushActive(now = performance.now()) {
+    return combatFlow.rushUntil > now;
+  }
+
+  function buildRush(tier, heavy) {
+    const wasActive = isRushActive();
+    combatFlow = advanceCombatFlow(combatFlow, {
+      tier,
+      combo,
+      heavy,
+      now: performance.now(),
+      gainMultiplier: runBonuses.rushGain,
+      durationBonusMs: runBonuses.rushDurationMs,
+    });
+    if (combatFlow.activated && !wasActive) {
+      SFX.fanfare();
+      shake(screen, 'shake-l');
+      fxText(screen, screen.clientWidth / 2, screen.clientHeight * .42, '⚡ 퇴근 러시!', 38, '#7cf7ff', 1200);
+      vibrate([45, 25, 45, 25, 100]);
+      Track('rush_activated', { weapon: equipId, combo, augments: runAugments.length });
+    }
+  }
+
+  function updateRushHud() {
+    const now = performance.now();
+    const flow = readCombatFlow(combatFlow, now);
+    rushFillEl.style.width = flow.meter + '%';
+    rushTextEl.textContent = flow.active ? `${(flow.remainingMs / 1000).toFixed(1)}초 · DMG x1.35` : flow.meter + '%';
+    screen.classList.toggle('rush-active', flow.active);
+    const frameDelta = Math.min(100, now - timerFrameAt);
+    timerFrameAt = now;
+    const paused = ['shopOverlay','natOverlay','augmentOverlay','jobOverlay','endingOverlay','rebirthOverlay']
+      .some(id => $('#' + id).classList.contains('show'));
+    if (paused && mental > 0) bossDeadline += frameDelta;
+    const remaining = Math.max(0, bossDeadline - now);
+    $('#bossTimer').textContent = (remaining / 1000).toFixed(1) + 's';
+    $('#bossTimer').classList.toggle('danger', remaining > 0 && remaining < 6_000);
+    if (!paused && mental > 0 && remaining <= 0 && !rebirthTriggered) failRebirth();
+    requestAnimationFrame(updateRushHud);
+  }
+
+  function addRunXp(tier, heavy) {
+    const beforeLevel = runLevel.level;
+    runLevel = gainRunXp(runLevel, [2, 4, 7][tier] + (heavy ? 1 : 0));
+    updateRunLevelHud();
+    if (runLevel.level > beforeLevel) {
+      const reward = runLevel.level * 5;
+      addCider(reward);
+      SFX.fanfare();
+      fxText(screen, screen.clientWidth / 2, screen.clientHeight * .48, `LEVEL UP! LV.${runLevel.level} · DMG +10% · +${reward}🥤`, 21, '#7bffb2', 1300);
+      vibrate([35, 20, 70]);
+      Track('run_level_up', { level: runLevel.level, company, rank });
+    }
+  }
+
+  function updateRunLevelHud() {
+    $('#runLevel').textContent = `LV.${runLevel.level}`;
+    $('#runXp').textContent = `${runLevel.xp} / ${runLevel.nextXp} EXP`;
+    $('#xpFill').style.width = (runLevel.xp / runLevel.nextXp * 100) + '%';
+  }
+
+  function sampleAugments() {
+    return [...AUGMENTS].sort(() => Math.random() - .5).slice(0, 3);
+  }
+
+  function renderRunLoadout() {
+    $('#runLoadout').textContent = runAugments.length
+      ? `현재 증강 ${runAugments.length}개 · DMG x${runBonuses.damage.toFixed(1)} · 보상 x${runBonuses.reward.toFixed(1)}`
+      : '이번 런의 첫 증강입니다';
+  }
+
+  function renderAugmentChoices() {
+    const wrap = $('#augmentChoices');
+    wrap.innerHTML = '';
+    sampleAugments().forEach(augment => {
+      const button = document.createElement('button');
+      button.className = 'augment-card';
+      button.innerHTML = `<span class="au-rarity">RUN AUGMENT</span><span class="au-icon">${augment.icon}</span><span class="au-name">${augment.name}</span><span class="au-desc">${augment.desc}</span>`;
+      button.addEventListener('click', () => chooseAugment(augment));
+      wrap.appendChild(button);
+    });
+    const reroll = $('#augmentReroll');
+    reroll.disabled = rerolledThisReward || cider < 30;
+    reroll.textContent = rerolledThisReward ? '재추첨 사용 완료' : '🔄 재추첨 · 30 🥤';
+    renderRunLoadout();
+  }
+
+  function openAugment(continueGame) {
+    augmentContinue = continueGame;
+    rerolledThisReward = false;
+    renderAugmentChoices();
+    $('#augmentOverlay').classList.add('show');
+    SFX.combo(5);
+    Track('augment_offered', { rank, company, owned: runAugments.length });
+  }
+
+  function chooseAugment(augment) {
+    runBonuses = applyAugment(runBonuses, augment.id);
+    runAugments.push(augment.id);
+    $('#augmentOverlay').classList.remove('show');
+    SFX.buy();
+    vibrate([30, 20, 60]);
+    Track('augment_selected', { augment: augment.id, rank, company, stack: runAugments.filter(id => id === augment.id).length });
+    const resume = augmentContinue;
+    augmentContinue = null;
+    setTimeout(() => resume && resume(), 260);
+  }
+
+  $('#augmentReroll').addEventListener('click', () => {
+    if (rerolledThisReward || cider < 30) return;
+    cider -= 30;
+    rerolledThisReward = true;
+    saveShop();
+    updateCider();
+    SFX.whoosh(1.2);
+    renderAugmentChoices();
+    Track('augment_rerolled', { rank, company });
+  });
 
   const TAUNTS = [
     // 라떼 · 꼰대
@@ -1182,6 +1502,7 @@ const Throw = (() => {
   let throwMode = 'drag', autoCrit = false; // 터치 자동 투척 여부
   let strikeTarget = null;                // 자동 투척의 조준점 (도달하면 명중)
   let knockDir = 0;                       // 스윙 방향에 따른 머리 넉백 (-1: 왼쪽)
+  let impactFreezeUntil = 0, hitStopTimer = null;
 
   function layout() {
     canvas.width = screen.clientWidth;
@@ -1251,6 +1572,9 @@ const Throw = (() => {
   function applyBossVisuals() {
     setBossFace();
     $('#mentalLabel').textContent = `${COMPANIES[company].name} · ${RANKS[rank - 1].name} 멘탈`;
+    const progress = getCareerProgress({ company, rank, companyCount: COMPANIES.length, rankCount: RANKS.length });
+    $('#careerStep').textContent = `목표 ${progress.current} / ${progress.total}`;
+    $('#careerFill').style.width = progress.percent + '%';
   }
 
   function bossRect() {
@@ -1286,7 +1610,9 @@ const Throw = (() => {
   let bobT = 0;
   (function bob() {
     bobT += 0.03;
-    if (mental > 0) bossWrap.style.transform = `translateX(-50%) translateY(${Math.sin(bobT) * 6}px)`;
+    if (mental > 0 && performance.now() >= impactFreezeUntil) {
+      bossWrap.style.transform = `translateX(-50%) translateY(${Math.sin(bobT) * 6}px)`;
+    }
     requestAnimationFrame(bob);
   })();
 
@@ -1414,6 +1740,69 @@ const Throw = (() => {
     resetPaper();
   }
 
+  // 짧은 정지와 과장된 눌림/반동을 한 묶음으로 재생해 타격 강도를 즉시 읽히게 한다.
+  function hitStop(ms) {
+    impactFreezeUntil = Math.max(impactFreezeUntil, performance.now() + ms);
+    screen.classList.add('hit-stop');
+    clearTimeout(hitStopTimer);
+    hitStopTimer = setTimeout(() => screen.classList.remove('hit-stop'), ms);
+  }
+
+  function impactFx(x, y, tier, heavy) {
+    const profile = getImpactProfile({ tier, heavy, rush: isRushActive() });
+    const level = profile.level;
+    hitStop(profile.freezeMs);
+
+    bossSvg.classList.remove('boss-impact-s', 'boss-impact-m', 'boss-impact-l');
+    void bossSvg.offsetWidth;
+    bossSvg.classList.add(`boss-impact-${level}`);
+
+    const ring = document.createElement('div');
+    ring.className = `impact-ring impact-${level}`;
+    ring.style.left = x + 'px';
+    ring.style.top = y + 'px';
+    ring.style.setProperty('--ring-scale', profile.ringScale);
+    if (profile.chromatic) ring.style.filter = 'drop-shadow(8px 0 #44e7ff) drop-shadow(-8px 0 #ff397e)';
+    screen.appendChild(ring);
+
+    const rays = document.createElement('div');
+    rays.className = `impact-rays impact-${level}`;
+    rays.style.left = x + 'px';
+    rays.style.top = y + 'px';
+    const count = profile.rays;
+    for (let i = 0; i < count; i++) {
+      const ray = document.createElement('span');
+      const angle = i * (360 / count) + rand(-9, 9);
+      ray.style.setProperty('--ray-angle', angle + 'deg');
+      ray.style.setProperty('--ray-length', rand(level === 'l' ? 72 : 48, level === 'l' ? 128 : 88) + 'px');
+      ray.style.setProperty('--ray-delay', rand(0, 35) + 'ms');
+      rays.appendChild(ray);
+    }
+    screen.appendChild(rays);
+
+    setTimeout(() => {
+      ring.remove();
+      rays.remove();
+      bossSvg.classList.remove(`boss-impact-${level}`);
+    }, 520);
+  }
+
+  function burstWeaponParticles(x, y, asset, count) {
+    for (let i = 0; i < count; i++) {
+      const shard = document.createElement('img');
+      shard.src = asset;
+      shard.alt = '';
+      shard.style.cssText = `position:absolute;z-index:34;pointer-events:none;width:${rand(18,32)}px;height:${rand(18,32)}px;object-fit:contain;left:${x}px;top:${y}px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55));transition:transform .48s cubic-bezier(.1,.7,.25,1),opacity .48s;`;
+      screen.appendChild(shard);
+      const angle = rand(0, Math.PI * 2), distance = rand(45, 105), spin = rand(-240, 240);
+      requestAnimationFrame(() => {
+        shard.style.transform = `translate(${Math.cos(angle) * distance}px,${Math.sin(angle) * distance}px) rotate(${spin}deg) scale(.35)`;
+        shard.style.opacity = '0';
+      });
+      setTimeout(() => shard.remove(), 520);
+    }
+  }
+
   // 명중 공통 처리: 카운트/콤보/멘탈/넉백/KO (사직서·주먹 공용)
   function registerHit(dmg) {
     hits++;
@@ -1451,52 +1840,62 @@ const Throw = (() => {
     strikeTarget = null;
     const w = weapon();
     const wIdx = WEAPONS.indexOf(w);
-    // 티어/데미지: 드래그는 던진 속도 기준, 터치 자동 투척은 무기 기본 데미지
-    // 최종 데미지 = 무기 굴림 x 경력(이직) x 능력치 x 크리 배수
+    const wasAuto = throwMode === 'auto';
+    // 티어를 먼저 확정한 뒤 러시를 충전한다. 이 타격에서 러시가 켜지면 즉시 보너스를 받는다.
     let tier, dmg;
-    const base = rand(w.dmg[0], w.dmg[1]) * dmgMult();
-    if (throwMode === 'auto') {
+    if (wasAuto) {
       tier = autoCrit ? 2 : 1;
-      dmg = base * (autoCrit ? critMult() : 1);
     } else {
-      const isCrit = speed > 46 || (combo >= 4 && speed > 34);
+      const isCrit = speed > 46 || (combo >= 4 && speed > 34) || Math.random() < runBonuses.critChance;
       tier = isCrit ? 2 : speed > 26 ? 1 : 0;
-      dmg = base * (tier === 2 ? critMult() + 0.3 : tier === 1 ? 1.2 : 0.6);
     }
     throwMode = 'drag';
 
     // 무기별 임팩트 디테일
     if (w.id === 'pen') stickPen(hx, hy);
-    const heavy = w.id === 'keyboard' || w.id === 'chair' || w.id === 'brief';
+    const heavy = ['keyboard', 'chair', 'brief', 'stamp'].includes(w.id);
+    buildRush(tier, heavy);
+    addRunXp(tier, heavy);
+    const rushMultiplier = isRushActive() ? 1.35 : 1;
+    const levelMultiplier = 1 + (runLevel.level - 1) * .1;
+    const base = rand(w.dmg[0], w.dmg[1]) * dmgMult() * runBonuses.damage * rushMultiplier * levelMultiplier;
+    const critical = critMult() + runBonuses.critDamage;
+    dmg = wasAuto
+      ? base * (tier === 2 ? critical : 1)
+      : base * (tier === 2 ? critical + .3 : tier === 1 ? 1.2 : .6);
+    impactFx(hx, hy, tier, heavy);
 
     if (tier === 2) {
       SFX.crit(); SFX.grunt(0.8);
       shake(screen, 'shake-l');
       flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
       fxText(screen, hx, hy - 30, w.critText, 32, '#ff4757');
-      burstParticles(screen, hx, hy, ['💥', '⭐', '💢', w.emoji], 14, 13);
+      burstParticles(screen, hx, hy, ['💥', '⭐', '💢'], 12, 13);
+      burstWeaponParticles(hx, hy, w.asset, 4);
       setFace('dizzy');
       say(pick(HIT_CRIT), 1500);
       vibrate([60, 40, 80]);
-      addCider(2 * COMPANIES[company].rwMul);
+      addCider(2 * COMPANIES[company].rwMul * runBonuses.reward);
     } else if (tier === 1) {
       SFX.hit(1.1 + wIdx * 0.15); SFX.grunt(1);
       shake(screen, heavy ? 'shake-l' : 'shake-m');
       fxText(screen, hx, hy - 26, w.hitText, 28, '#ffd83d');
-      burstParticles(screen, hx, hy, ['💢', '💦', w.emoji], 8, 9);
+      burstParticles(screen, hx, hy, ['💢', '💦'], 7, 9);
+      burstWeaponParticles(hx, hy, w.asset, 2);
       setFace('hit');
       if (Math.random() < 0.6) say(pick(HIT_MID), 1300);
       vibrate(50);
-      addCider(COMPANIES[company].rwMul);
+      addCider(COMPANIES[company].rwMul * runBonuses.reward);
     } else {
       SFX.hit(0.6);
       shake(screen, 'shake-s');
       fxText(screen, hx, hy - 22, '톡', 20, '#cfd3ec');
-      burstParticles(screen, hx, hy, ['💦', w.emoji], 4, 6);
+      burstParticles(screen, hx, hy, ['💦'], 4, 6);
+      burstWeaponParticles(hx, hy, w.asset, 1);
       setFace('hit');
       say(pick(HIT_WEAK), 1200);
       vibrate(25);
-      addCider(COMPANIES[company].rwMul);
+      addCider(COMPANIES[company].rwMul * runBonuses.reward);
     }
 
     registerHit(dmg);
@@ -1505,9 +1904,10 @@ const Throw = (() => {
 
   // 볼펜이 얼굴에 꽂히는 연출
   function stickPen(x, y) {
-    const el = document.createElement('div');
+    const el = document.createElement('img');
     el.className = 'stuck-pen';
-    el.textContent = '🖊️';
+    el.src = WEAPONS.find(w => w.id === 'pen').asset;
+    el.alt = '';
     el.style.left = x + 'px';
     el.style.top = y + 'px';
     screen.appendChild(el);
@@ -1531,7 +1931,7 @@ const Throw = (() => {
   bossWrap.addEventListener('pointerdown', e => {
     if (dragging || mental <= 0) return;
     const now = performance.now();
-    if (now - lastStrike < 130) return; // 이벤트 스팸 방지 (연타는 허용)
+    if (now - lastStrike < (isRushActive(now) ? 75 : 130)) return; // 러시 중에는 연타 제한 해제
     lastStrike = now;
     e.preventDefault();
     throwHintEl.style.display = 'none';
@@ -1544,7 +1944,7 @@ const Throw = (() => {
     strikeChain++;
     clearTimeout(strikeChainTimer);
     strikeChainTimer = setTimeout(() => strikeChain = 0, 900);
-    autoCrit = (strikeChain >= 5 && strikeChain % 5 === 0) || Math.random() < critChance();
+    autoCrit = (strikeChain >= 5 && strikeChain % 5 === 0) || Math.random() < Math.min(.8, critChance() + runBonuses.critChance);
 
     // 어디를 터치해도 얼굴을 향해 날아가도록 조준점을 얼굴 판정 영역 안으로 클램프
     const fr = bossRect();
@@ -1606,22 +2006,24 @@ const Throw = (() => {
   function swingFx(w, x, y) {
     const el = document.createElement('div');
     el.className = w.swing === 'side' ? 'swing-side' : 'swing-smash';
-    el.textContent = w.emoji;
+    const img = document.createElement('img');
+    img.className = 'weapon-fx-img';
+    img.src = w.asset;
+    img.alt = '';
+    el.appendChild(img);
     el.style.left = x + 'px';
     el.style.top = y + 'px';
     screen.appendChild(el);
     setTimeout(() => el.remove(), 420);
   }
 
-  // 장착 무기에 따라 투사체 비주얼 교체 (사직서 ↔ 무기 이모지)
+  // 장착 무기 에셋을 투사체에도 그대로 사용해 상점/전투 비주얼을 일치시킨다.
   function updateProjectile() {
     const w = weapon();
-    const isPaper = w.id === 'fist';
-    $('#paperSvg').style.display = isPaper ? '' : 'none';
+    $('#paperSvg').style.display = 'none';
     const em = $('#paperEmoji');
-    em.style.display = isPaper ? 'none' : 'flex';
-    em.textContent = w.emoji;
-    em.style.fontSize = (w.size || 56) + 'px';
+    em.style.display = 'flex';
+    $('#weaponProjectile').src = w.asset;
   }
 
   /* ── 전국 타격 집계 ──
@@ -1690,7 +2092,14 @@ const Throw = (() => {
     SFX.fanfare();
     setFace('ko');
     const isFinal = rank === RANKS.length; // 회장 격파 → 이직 타임
-    const reward = Math.round((20 + 15 * rank) * COMPANIES[company].rwMul * (isFinal ? 3 : 1));
+    const isEnding = getCareerProgress({
+      company,
+      rank,
+      companyCount: COMPANIES.length,
+      rankCount: RANKS.length,
+      bossDefeated: true,
+    }).cleared;
+    const reward = Math.round((20 + 15 * rank) * COMPANIES[company].rwMul * (isFinal ? 3 : 1) * runBonuses.reward);
     addCider(reward);
     Track('boss_ko', { rank, rank_name: RANKS[rank - 1].name, company, weapon: equipId, total_hits: hits });
     bossWrap.style.transition = 'transform .8s';
@@ -1704,8 +2113,9 @@ const Throw = (() => {
       fxText(screen, cw / 2, ch * 0.44, pick(KO_SUBS).split('\n')[0], 17, '#dfe3ff', 1500);
       fxText(screen, cw / 2, ch * 0.54, `위로금 +${fmt(reward)} 🥤`, 24, '#7bffb2', 1500);
     }, 400);
-    if (isFinal) setTimeout(openJobPanel, 1900);
-    else setTimeout(nextBoss, 2000);
+    if (isEnding) setTimeout(openEnding, 1900);
+    else if (isFinal) setTimeout(openJobPanel, 1900);
+    else setTimeout(() => openAugment(nextBoss), 1900);
   }
 
   function nextBoss() {
@@ -1718,6 +2128,8 @@ const Throw = (() => {
   function spawnBoss() {
     maxMental = hpFor();
     mental = maxMental;
+    bossDeadline = performance.now() + BOSS_TIME_MS;
+    rebirthTriggered = false;
     saveCareer();
     localStorage.setItem('mental', mental);
     updateMental();
@@ -1727,8 +2139,73 @@ const Throw = (() => {
     setFace('idle');
   }
 
+  function failRebirth() {
+    rebirthTriggered = true;
+    const reward = getRebirthReward({ company, rank });
+    rebirthPower = Math.round((rebirthPower + reward) * 100) / 100;
+    mental = 0;
+    updateMental();
+    saveCareer();
+    setFace('dizzy');
+    SFX.thud();
+    shake(screen, 'shake-m');
+    $('#rebirthGain').textContent = `영구 공격력 +${Math.round(reward * 100)}% · 환생 누적 +${Math.round(rebirthPower * 100)}%`;
+    $('#rebirthOverlay').classList.add('show');
+    Track('forced_rebirth', { company, rank, reward, total_power: rebirthPower, run_level: runLevel.level });
+  }
+
+  $('#rebirthContinue').addEventListener('click', () => {
+    rank = 1;
+    runBonuses = getRunBonuses();
+    runAugments = [];
+    runLevel = { level: 1, xp: 0, nextXp: 25, levelsGained: 0 };
+    combatFlow = { meter: 0, rushUntil: 0 };
+    updateRunLevelHud();
+    $('#rebirthOverlay').classList.remove('show');
+    spawnBoss();
+    SFX.buy();
+    vibrate([40, 20, 70]);
+    fxText(screen, screen.clientWidth / 2, screen.clientHeight * .36, `환생 완료 · 영구 DMG x${careerMult().toFixed(2)}`, 22, '#7bffb2', 1500);
+    say('분명 쓰러졌는데… 왜 더 세져서 돌아온 거야?', 2400);
+  });
+
+  function openEnding() {
+    transfers[company]++;
+    gameClears++;
+    saveCareer();
+    const w = weapon();
+    $('#endingStats').innerHTML = `
+      <div class="ending-stat">누적 타격<b>${fmt(hits)}회</b></div>
+      <div class="ending-stat">최고 콤보<b>${fmt(bestCombo)}</b></div>
+      <div class="ending-stat">최종 무기<b>${w.name}</b></div>
+      <div class="ending-stat">엔딩 훈장<b>${gameClears}개 · DMG +${gameClears * 50}%</b></div>`;
+    $('#endingOverlay').classList.add('show');
+    SFX.fanfare();
+    burstParticles(screen, screen.clientWidth / 2, screen.clientHeight * .26, ['🏆','🎉','⭐','✨','🥤'], 30, 14);
+    Track('game_cleared', { clears: gameClears, hits, best_combo: bestCombo, weapon: equipId });
+  }
+
+  $('#newGamePlus').addEventListener('click', () => {
+    company = 0;
+    rank = 1;
+    runBonuses = getRunBonuses();
+    runAugments = [];
+    runLevel = { level: 1, xp: 0, nextXp: 25, levelsGained: 0 };
+    combatFlow = { meter: 0, rushUntil: 0 };
+    updateRunLevelHud();
+    $('#endingOverlay').classList.remove('show');
+    spawnBoss();
+    SFX.buy();
+    vibrate([40, 20, 80]);
+    fxText(screen, screen.clientWidth / 2, screen.clientHeight * .33, `2회차 시작 · 영구 DMG x${careerMult().toFixed(2)}`, 21, '#ffd83d', 1700);
+    say('또 출근했나? 이번엔 처음부터 느낌이 안 좋은데…', 2600);
+    Track('new_game_plus_started', { clears: gameClears, multiplier: careerMult() });
+  });
+
   /* ── 이직(환생): 회장을 잡으면 회사를 골라서 이동, 경력 1회당 영구 데미지 +15% ── */
   function openJobPanel() {
+    transfers[company]++;
+    saveCareer();
     renderJobs();
     $('#jobOverlay').classList.add('show');
     Track('job_panel_opened', { company, career: totalTransfers() });
@@ -1763,10 +2240,14 @@ const Throw = (() => {
   }
 
   function doTransfer(to) {
-    transfers[company]++; // 방금 회장까지 부순 회사 기준으로 이직 경력 +1
     const from = company;
     company = to;
     rank = 1;
+    runBonuses = getRunBonuses();
+    runAugments = [];
+    runLevel = { level: 1, xp: 0, nextXp: 25, levelsGained: 0 };
+    combatFlow = { meter: 0, rushUntil: 0 };
+    updateRunLevelHud();
     $('#jobOverlay').classList.remove('show');
     SFX.buy();
     vibrate([40, 30, 60]);
@@ -1834,7 +2315,7 @@ const Throw = (() => {
       const row = document.createElement('div');
       row.className = 'shop-item' + (isEquipped ? ' equipped' : '');
       row.innerHTML = `
-        <div class="si-emoji">${w.emoji}</div>
+        <img class="weapon-icon" src="${w.asset}" alt="">
         <div class="si-info">
           <div class="si-name">${w.name} <span class="si-dmg">DMG ${w.dmg[0]}~${w.dmg[1]}</span></div>
           <div class="si-desc">${w.desc}</div>
@@ -1859,7 +2340,7 @@ const Throw = (() => {
           saveShop();
           Track('weapon_purchased', {
             weapon: w.id, weapon_name: w.name, price: w.price,
-            rank: WEAPONS.indexOf(w),          // 상점 진행도: 1(볼펜)~6(서류가방)
+            rank: WEAPONS.indexOf(w),          // 상점 진행도
             weapons_owned: owned.length,        // 지금까지 보유한 무기 수
             reached_final: w.id === WEAPONS[WEAPONS.length - 1].id, // 최종 무기 도달 여부
             rank, company,
@@ -1897,6 +2378,7 @@ const Throw = (() => {
   updateMental();
   updateCider();
   updateProjectile();
+  updateRushHud();
   fetchNatStats();
   setInterval(fetchNatStats, 30000); // HUD의 전국 타격 수를 준실시간으로 갱신
   applyBossVisuals();

@@ -1,0 +1,14 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true
+  },
+  "include": [
+    "App.js",
+    "index.js",
+    "src/webviewPolicy.mjs",
+    "types/assets.d.ts"
+  ]
+}
